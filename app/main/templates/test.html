@@ -1,0 +1,18 @@
+{% extends "main_base.html" %}
+
+{% block body %}
+
+<h1> ciao</h1>
+
+{% endblock %}
+
+
+
+
+{% block activeLink %}
+<script>
+    const nav_links = document.getElementsByClassName("nav-link");
+    const active = nav_links[1];
+    active.classList.add('active');
+</script>
+{% endblock %}

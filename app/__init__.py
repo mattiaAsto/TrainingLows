@@ -93,7 +93,9 @@ def create_app():
 
     # Import tables as classes from the models.py file
     #from app.admin.routes import UserOnlyView, AdminOnlyView, RunnerOnlyView, ArticleView, RunnerPointsView, UserRunnerView, LeagueView, LeagueDataView, UserLeagueView, TMOView
-    from .models import Athlete
+    from .models import User
+
+    
 
     """ Adding the tables to the admin panel
     admin_panel.add_view(ArticleView(Article, db.session))
@@ -121,10 +123,12 @@ def create_app():
     login_manager.login_view="auth.login"
 
     # Structure needed to use "current_user"
-    from .models import Athlete
+    from .models import User
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(user_id)
+    
+    
     
     # Create error handling instances
 

@@ -3,9 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" 
+        rel="stylesheet" 
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB   " 
+        crossorigin="anonymous">
+    
+    <title>{% block title %}TrainingLows{% endblock %}</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #main-content {
+            flex: 1;
+        }
+        
+        .nav-link:hover {
+            color: #dc3545;
+            transition: color 0.3s ease;
+        }
+        
+        footer {
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            margin-top: auto;
+        }
+        
+        @media (max-width: 767.98px) {
+            body {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div id="main-wrapper">
+        <!-- Header Navigation -->
+        <nav class="navbar navbar-expand-md navbar-light bg-light justify-content-between" style="margin-left: 15px; margin-right: 15px;">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{url_for('main.home')}}">
+                    <i class="fas fa-person-running" style="font-size: 24px;"></i>
+                    <span class="d-none d-md-inline" style="margin-left: 8px;">TrainingLows</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="fa-solid fa-bars" id="navToggleIcon"></i>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto d-none d-md-flex" style="padding-left: 20px;">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Calendar</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Graphs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Analysis</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Sign In</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <!-- End Header Navigation -->
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-grow-1">
+            <!-- Page Content Block -->
+            {% block body %}
+
+            {% endblock %}
+        </main>
+        <!-- End Main Content Area -->
+
+        <!-- Footer -->
+        <footer class="bg-light py-4 mt-auto">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <p class="text-muted mb-0">&copy; 2026 TrainingLows. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        <!-- End Footer -->
+    </div>
+    <!-- End Main Wrapper -->
+
+    <!-- Fixed bottom navigation for mobile -->
+
+    <nav class="navbar fixed-bottom bg-light d-md-none border-top">
+        <div class="container-fluid justify-content-around">
+            <a class="nav-link text-center" href="#">
+                <i class="fas fa-house"></i>
+                <div style="font-size: 12px;">Home</div>
+            </a>
+            <a class="nav-link text-center" href="#">
+                <i class="fas fa-calendar"></i>
+                <div style="font-size: 12px;">Calendar</div>
+            </a>
+            <a class="nav-link text-center" href="#">
+                <i class="fas fa-arrow-trend-up"></i>
+                <div style="font-size: 12px;">Graphs</div>
+            </a>
+            <a class="nav-link text-center" href="#">
+                <i class="fa-regular fa-magnifying-glass"></i>
+                <div style="font-size: 12px;">Analysis</div>
+            </a>
+        </div>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+     crossorigin="anonymous"></script>
     
+    <script>
+        const navbarCollapse = document.getElementById('navbarNav');
+        const toggleIcon = document.getElementById('navToggleIcon');
+        
+        navbarCollapse.addEventListener('show.bs.collapse', function () {
+            toggleIcon.classList.remove('fa-bars');
+            toggleIcon.classList.add('fa-bars-staggered');
+        });
+        
+        navbarCollapse.addEventListener('hide.bs.collapse', function () {
+            toggleIcon.classList.remove('fa-bars-staggered');
+            toggleIcon.classList.add('fa-bars');
+        });
+    </script>
+
+    {% block activeLink %}
+
+    {% endblock %}
 </body>
 </html>

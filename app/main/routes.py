@@ -18,4 +18,8 @@ def home():
     return render_template("main_base.html")
 
 
+@main.route("/test")
+def test():
+    return render_template("test.html")
+
 
