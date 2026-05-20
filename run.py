@@ -25,7 +25,7 @@ hashed_password=bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
 admin = User(
     first_name = "Admin",
     last_name = "Admin",
-    email = "Admin",
+    email = "1@admin.com",
     password = hashed_password,
     verified_email = True
 )
