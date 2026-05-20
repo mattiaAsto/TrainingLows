@@ -75,6 +75,12 @@ def create_app():
     app.config['CACHE_TYPE'] = cache_type
     app.config['CACHE_DEFAULT_TIMEOUT'] = cache_default_timeout
 
+    # Confing strava 
+    app.config['STRAVA_CLIENT_ID']     = os.getenv("STRAVA_CLIENT_ID")
+    app.config['STRAVA_CLIENT_SECRET'] = os.getenv("STRAVA_CLIENT_SECRET")
+    app.config['STRAVA_REDIRECT_URI']  = os.getenv("STRAVA_REDIRECT_URI")
+    app.config['STRAVA_SCOPES']        = os.getenv("STRAVA_SCOPES", "read,activity:read")
+    app.config['PREFERRED_URL_SCHEME'] = os.getenv('PREFERRED_URL_SCHEME', 'http')
 
     #init Flask-Mail
     mail.init_app(app)
@@ -112,8 +118,10 @@ def create_app():
     # Register blueprints
     from app.main import main as main_blueprint
     from app.auth import auth as auth_blueprint
+    from app.strava import strava as strava_blueprint
     app.register_blueprint(main_blueprint, url_prefix='/')
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    app.register_blueprint(strava_blueprint, url_prefix='/strava')
 
 
     # Create the database using the configs from before

@@ -7,6 +7,7 @@ from flask_login import login_manager, current_user, login_user, logout_user
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 from sqlalchemy import distinct
+from app.strava.client import *
 import os
 import json
 import time
@@ -29,15 +30,8 @@ def home():
 
 @main.route("/test")
 def test():
-    admin = User.query.first()
-    admin.athlete_profile = Athlete(
-        sport = "running",
-        date_of_birth = date(2005, 12, 16)
-    )
-    db.session.commit()
-
-    admin.athlete_profile.create_activities_table()
-
-    return render_template("test.html")
-
+    
+    list_ = get_activities(current_user.strava_athlete_id, per_page=2)
+    print(list_)
+    return jsonify(list_)
 

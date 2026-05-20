@@ -1,0 +1,337 @@
+{% extends "main_base.html" %}
+
+{% block title %}Strava — TrainingLows{% endblock %}
+
+{% block body %}
+
+<style>
+    .strava-page {
+        max-width: 680px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+    }
+
+    /* ── Section heading ── */
+    .section-eyebrow {
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #aaa;
+        margin-bottom: .4rem;
+    }
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: .4rem;
+    }
+    .section-sub {
+        color: #666;
+        font-size: .9rem;
+        margin-bottom: 2rem;
+    }
+
+    /* ── Card ── */
+    .strava-card {
+        border: 1.5px solid #e8e8e8;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    }
+
+    /* ── Card header stripe ── */
+    .card-stripe {
+        background: linear-gradient(135deg, #FC4C02 0%, #e63e00 100%);
+        padding: 1.4rem 1.6rem;
+        display: flex;
+        align-items: center;
+        gap: .9rem;
+    }
+    .card-stripe svg { flex-shrink: 0; }
+    .card-stripe-text { color: #fff; }
+    .card-stripe-text strong { font-size: 1rem; display: block; font-weight: 700; }
+    .card-stripe-text span  { font-size: .8rem; opacity: .85; }
+
+    /* ── Card body ── */
+    .card-body-inner {
+        padding: 1.6rem;
+    }
+
+    /* ── Status badge ── */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .3rem .8rem;
+        border-radius: 20px;
+        font-size: .78rem;
+        font-weight: 600;
+        margin-bottom: 1.4rem;
+    }
+    .status-badge.connected {
+        background: #e8f8ee;
+        color: #1a7a3c;
+        border: 1px solid #b3e8c5;
+    }
+    .status-badge.disconnected {
+        background: #f5f5f5;
+        color: #888;
+        border: 1px solid #e0e0e0;
+    }
+    .status-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+    }
+    .connected  .status-dot { background: #2ecc71; }
+    .disconnected .status-dot { background: #bbb; }
+
+    /* ── Athlete row ── */
+    .athlete-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f9f9f9;
+        border-radius: 10px;
+        margin-bottom: 1.4rem;
+        border: 1px solid #efefef;
+    }
+    .athlete-avatar {
+        width: 52px; height: 52px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #FC4C02;
+        flex-shrink: 0;
+    }
+    .avatar-fallback {
+        width: 52px; height: 52px;
+        border-radius: 50%;
+        background: #FC4C02;
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .athlete-name { font-weight: 700; font-size: .95rem; color: #1a1a1a; }
+    .athlete-meta { font-size: .78rem; color: #888; margin-top: .1rem; }
+
+    /* ── Scope list ── */
+    .scope-list {
+        list-style: none;
+        padding: 0; margin: 0 0 1.4rem;
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+    }
+    .scope-list li {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        font-size: .83rem;
+        color: #444;
+    }
+    .scope-list li i {
+        color: #FC4C02;
+        font-size: .75rem;
+        width: 14px;
+    }
+
+    /* ── Buttons ── */
+    .btn-strava {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        background: #FC4C02;
+        color: #fff !important;
+        border: none;
+        padding: .65rem 1.4rem;
+        border-radius: 8px;
+        font-size: .875rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background .15s, transform .1s, box-shadow .15s;
+        box-shadow: 0 2px 8px rgba(252,76,2,.25);
+    }
+    .btn-strava:hover {
+        background: #e63e00;
+        box-shadow: 0 4px 14px rgba(252,76,2,.35);
+        transform: translateY(-1px);
+    }
+    .btn-strava:active { transform: scale(.97); }
+
+    .btn-disconnect {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        background: #fff;
+        color: #666 !important;
+        border: 1.5px solid #e0e0e0;
+        padding: .6rem 1.2rem;
+        border-radius: 8px;
+        font-size: .875rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color .15s, color .15s;
+    }
+    .btn-disconnect:hover {
+        border-color: #dc3545;
+        color: #dc3545 !important;
+    }
+
+    /* ── Divider ── */
+    .card-divider {
+        border: none;
+        border-top: 1px solid #f0f0f0;
+        margin: 1.2rem 0;
+    }
+
+    /* ── Info note ── */
+    .info-note {
+        display: flex;
+        gap: .6rem;
+        align-items: flex-start;
+        background: #fffbf5;
+        border: 1px solid #fde5cc;
+        border-radius: 8px;
+        padding: .8rem 1rem;
+        font-size: .78rem;
+        color: #7a4010;
+        margin-top: 1rem;
+    }
+    .info-note i { color: #FC4C02; margin-top: .1rem; flex-shrink: 0; }
+
+    /* ── Alerts ── */
+    .alert { border-radius: 10px; font-size: .875rem; }
+</style>
+
+<div class="strava-page">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <p class="section-eyebrow">Integrations</p>
+    <h1 class="section-title">Strava Connection</h1>
+    <p class="section-sub">Link your Strava account to automatically sync your training activities.</p>
+
+    <div class="strava-card">
+
+        <!-- Orange header stripe -->
+        <div class="card-stripe">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 3L6.5 13H9.5L6 21M10 3L13.5 13H10.5M13.5 13L17.5 3M13.5 13L17 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="card-stripe-text">
+                <strong>Strava</strong>
+                <span>Activity tracking &amp; performance data</span>
+            </div>
+        </div>
+
+        <!-- Card body -->
+        <div class="card-body-inner">
+
+            {% if connected %}
+                <!-- ── Connected state ── -->
+
+                <span class="status-badge connected">
+                    <span class="status-dot"></span>
+                    Connected
+                </span>
+
+                {% if athlete %}
+                <div class="athlete-row">
+                    {% if athlete.profile and athlete.profile != 'https://dgalywyr863hv.cloudfront.net/pictures/athletes/large.jpg' %}
+                        <img class="athlete-avatar" src="{{ athlete.profile }}" alt="{{ athlete.firstname }}">
+                    {% else %}
+                        <div class="avatar-fallback">{{ athlete.firstname[0] }}{{ athlete.lastname[0] }}</div>
+                    {% endif %}
+                    <div>
+                        <div class="athlete-name">{{ athlete.firstname }} {{ athlete.lastname }}</div>
+                        <div class="athlete-meta">
+                            {% if athlete.city %}{{ athlete.city }}{% endif %}{% if athlete.city and athlete.country %}, {% endif %}{% if athlete.country %}{{ athlete.country }}{% endif %}
+                            &nbsp;·&nbsp; Athlete ID {{ athlete.id }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <p style="font-size:.85rem; color:#555; margin-bottom:1.2rem;">
+                    Your Strava account is linked. Activities will be synced automatically.
+                    You can disconnect at any time — this will remove your stored access token.
+                </p>
+
+                <hr class="card-divider">
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('strava.disconnect') }}" class="btn-disconnect">
+                        <i class="fa-solid fa-link-slash"></i>
+                        Disconnect
+                    </a>
+                    <a href="{{ url_for('strava.connect') }}" class="btn-strava" style="background:#555; box-shadow:none;">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        Re-authorise
+                    </a>
+                </div>
+
+            {% else %}
+                <!-- ── Disconnected state ── -->
+
+                <span class="status-badge disconnected">
+                    <span class="status-dot"></span>
+                    Not connected
+                </span>
+
+                <p style="font-size:.85rem; color:#555; margin-bottom:1.2rem;">
+                    Connect your Strava account to allow TrainingLows to read your activities and performance data.
+                </p>
+
+                <p style="font-size:.8rem; font-weight:600; color:#333; margin-bottom:.6rem;">This app will be able to:</p>
+                <ul class="scope-list">
+                    <li><i class="fa-solid fa-check"></i> View your public profile</li>
+                    <li><i class="fa-solid fa-check"></i> Read your activities (distance, pace, heart rate)</li>
+                    <li><i class="fa-solid fa-check"></i> Access your training stats and totals</li>
+                    <li><i class="fa-solid fa-xmark" style="color:#ccc;"></i> Post or modify any data on your behalf</li>
+                </ul>
+
+                <hr class="card-divider">
+
+                <a href="{{ url_for('strava.connect') }}" class="btn-strava">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M10 3L6.5 13H9.5L6 21M10 3L13.5 13H10.5M13.5 13L17.5 3M13.5 13L17 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Connect with Strava
+                </a>
+
+                <div class="info-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>You'll be redirected to Strava to authorise access. We only store the token needed to read your data — your Strava password is never shared with us.</span>
+                </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block activeLink %}
+<script>
+    // Highlight the correct nav link — adjust index to match your nav order
+    const nav_links = document.getElementsByClassName("nav-link");
+    // No dedicated nav item for Settings yet; add one or adjust the index below:
+    // const active = nav_links[X];
+    // active.classList.add('active');
+</script>
+{% endblock %}

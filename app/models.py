@@ -3,12 +3,45 @@ from flask_login import UserMixin
 from sqlalchemy.types import LargeBinary
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import time
 
 
 CoachAthlete = db.Table("CoachAthlete",
     db.Column("coach_id", db.Integer, db.ForeignKey("Coaches.id"), primary_key=True),
     db.Column("athlete_id", db.Integer, db.ForeignKey("Athletes.id"), primary_key=True)
 )
+
+
+class StravaToken(db.Model):
+    """Stores per-athlete OAuth tokens."""
+
+    __tablename__ = "strava_tokens"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    athlete_id    = db.Column(db.BigInteger, unique=True, nullable=False, index=True)
+    access_token  = db.Column(db.String(255), nullable=False)
+    refresh_token = db.Column(db.String(255), nullable=False)
+    expires_at    = db.Column(db.BigInteger, nullable=False)   # Unix timestamp
+    scope         = db.Column(db.String(255), nullable=True)
+    created_at    = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at    = db.Column(db.DateTime, server_default=db.func.now(),
+                              onupdate=db.func.now())
+
+    # ── Helpers ────────────────────────────────────────────────────────────────
+
+    @property
+    def is_expired(self) -> bool:
+        """True when the access token has expired (with 60-s buffer)."""
+        return time.time() > (self.expires_at - 60)
+
+    def update_from_response(self, token_data: dict) -> None:
+        """Overwrite fields from a Strava token-refresh response."""
+        self.access_token  = token_data["access_token"]
+        self.refresh_token = token_data["refresh_token"]
+        self.expires_at    = token_data["expires_at"]
+
+    def __repr__(self) -> str:
+        return f"<StravaToken athlete_id={self.athlete_id}>"
 
 
 class User(UserMixin, db.Model):
@@ -20,6 +53,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(LargeBinary, nullable=False)
     verified_email = db.Column(db.Boolean, nullable=False, default=False)
+    strava_athlete_id = db.Column(db.BigInteger, nullable=True, unique=True)
 
     athlete_profile = db.relationship("Athlete", back_populates="user", uselist=False)
     coach_profile = db.relationship("Coach", back_populates="user", uselist=False)
