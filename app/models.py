@@ -118,7 +118,7 @@ class Running(Activity):
     
     # Running-specific attributes
     pace_km_h = db.Column(db.Float, nullable=True)        # Average pace in km/h
-    elevation_gain_m = db.Column(db.Float, nullable=True) # Elevation gain in meters
+    elevation_gain_m_running = db.Column(db.Float, nullable=True) # Elevation gain in meters
     surface = db.Column(db.String(30), nullable=True)     # "road", "trail", "track"
 
 
@@ -142,6 +142,6 @@ class Cycling(Activity):
     
     # Cycling-specific attributes
     speed_km_h = db.Column(db.Float, nullable=True)       # Average speed in km/h
-    elevation_gain_m = db.Column(db.Float, nullable=True) # Elevation gain in meters
+    elevation_gain_m_cycling = db.Column(db.Float, nullable=True) # Elevation gain in meters
     bike_type = db.Column(db.String(30), nullable=True)   # "road", "mountain", "hybrid"
     terrain = db.Column(db.String(30), nullable=True)     # "road", "trail", "mixed"
