@@ -55,8 +55,8 @@ class User(UserMixin, db.Model):
     verified_email = db.Column(db.Boolean, nullable=False, default=False)
     strava_athlete_id = db.Column(db.BigInteger, nullable=True, unique=True)
 
-    athlete_profile = db.relationship("Athlete", back_populates="user", uselist=False)
-    coach_profile = db.relationship("Coach", back_populates="user", uselist=False)
+    athlete_profile = db.relationship("Athlete", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    coach_profile = db.relationship("Coach", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     @property
     def is_athlete(self):
@@ -70,19 +70,19 @@ class User(UserMixin, db.Model):
 class Athlete(db.Model):
     __tablename__ = "Athletes"
 
-    id = db.Column(db.Integer, db.ForeignKey("Users.id"), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("Users.id", ondelete="CASCADE"), primary_key=True)
     sport = db.Column(db.String(50), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
 
     user = db.relationship("User", back_populates="athlete_profile")
     coaches = db.relationship("Coach", secondary=CoachAthlete, back_populates="athletes")
-    activities = db.relationship("Activity", foreign_keys="Activity.athlete_id", backref="athlete")
+    activities = db.relationship("Activity", foreign_keys="Activity.athlete_id", backref="athlete", cascade="all, delete-orphan")
 
 
 class Coach(db.Model):
     __tablename__ = "Coaches"
 
-    id = db.Column(db.Integer, db.ForeignKey("Users.id"), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("Users.id", ondelete="CASCADE"), primary_key=True)
     specialization = db.Column(db.String(50), nullable=True)
     bio = db.Column(db.Text, nullable=True)
 
@@ -96,12 +96,14 @@ class Activity(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("Athletes.id"), nullable=False, index=True)
+    title = db.Column(db.String(50), nullable=False, index=True)  # Discriminator column for inheritance
     activity_type = db.Column(db.String(50), nullable=False, index=True)  # Discriminator column for inheritance
     
     # Common attributes for all activities
     duration_seconds = db.Column(db.Integer, nullable=False)  # Duration in seconds
     distance_km = db.Column(db.Float, nullable=True)          # Distance in kilometers
     calories_burned = db.Column(db.Integer, nullable=True)    # Calories burned
+    elevation_gain_m = db.Column(db.Float, nullable=True)     # Elevation gain in meters
     intensity = db.Column(db.String(20), nullable=False)      # "low", "moderate", "high"
     description = db.Column(db.Text, nullable=True)
     date = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Europe/Zurich")), index=True)
@@ -151,8 +153,8 @@ class Running(Activity):
     }
     
     # Running-specific attributes
-    pace_km_h = db.Column(db.Float, nullable=True)        # Average pace in km/h
-    elevation_gain_m_running = db.Column(db.Float, nullable=True) # Elevation gain in meters
+    pace_min_km = db.Column(db.Float, nullable=True)        # Average pace in min/km
+
     surface = db.Column(db.String(30), nullable=True)     # "road", "trail", "track"
 
 
@@ -176,6 +178,17 @@ class Cycling(Activity):
     
     # Cycling-specific attributes
     speed_km_h = db.Column(db.Float, nullable=True)       # Average speed in km/h
-    elevation_gain_m_cycling = db.Column(db.Float, nullable=True) # Elevation gain in meters
+
     bike_type = db.Column(db.String(30), nullable=True)   # "road", "mountain", "hybrid"
     terrain = db.Column(db.String(30), nullable=True)     # "road", "trail", "mixed"
+
+
+class Strenght(Activity):
+    """Strenght activity - inherits from Activity"""
+    __mapper_args__ = {
+        "polymorphic_identity": "strength"
+    }
+    
+    # Strenght-specific attributes
+
+    strenght_type = db.Column(db.String(30), nullable=True)   # "maximal", "resistance", "power"

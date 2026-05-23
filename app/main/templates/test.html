@@ -10,9 +10,14 @@
 
 
 {% block activeLink %}
+<style>
+    .active1{
+            color: #dc3546;
+        }
+</style>
 <script>
     const nav_links = document.getElementsByClassName("nav-link");
     const active = nav_links[1];
-    active.classList.add('active');
+    active.classList.add('active1');
 </script>
 {% endblock %}

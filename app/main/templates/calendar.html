@@ -1,0 +1,530 @@
+{% extends "main_base.html" %}
+
+{% block body %}
+<div class="container-fluid p-4">
+    <!-- Page Header & Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1" style="color: #333; font-size: 28px; font-weight: 600;">Training Calendar</h1>
+            <p class="text-muted mb-0" id="calendar-info">Current Week Summary</p>
+        </div>
+        <!-- removed duplicate control: navigation is handled by central view controls below -->
+    </div>
+
+    <!-- View Controls: integrated prev / view / next -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            <button class="btn btn-white border" id="nav-prev" data-prev-week="{{ prev_week|default('') }}" data-prev-month="{{ prev_month|default('') }}" data-prev-year="{{ prev_year|default('') }}"><i class="fas fa-chevron-left text-muted"></i></button>
+        </div>
+        <div>
+            <div class="btn-group" role="group" aria-label="calendar view">
+                <button type="button" class="btn btn-outline-secondary" data-view="week">Week</button>
+                <button type="button" class="btn btn-outline-secondary" data-view="month">Month</button>
+                <button type="button" class="btn btn-outline-secondary" data-view="year">Year</button>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-white border" id="nav-next" data-next-week="{{ next_week|default('') }}" data-next-month="{{ next_month|default('') }}" data-next-year="{{ next_year|default('') }}"><i class="fas fa-chevron-right text-muted"></i></button>
+        </div>
+    </div>
+
+    <!-- Upcoming Week Details (moved before calendar grid) -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header border-0 bg-white p-3">
+                    <h5 class="mb-0" style="color: #333; font-weight: 600;">Upcoming Week Details</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 14px;">
+                            <thead class="table-light">
+                                <tr class="text-muted" style="font-size: 12px;">
+                                    <th>Date</th>
+                                    <th>Activity</th>
+                                    <th>Target Details</th>
+                                    <th>Compliance Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in detailed_schedule|default([]) %}
+                                <tr>
+                                    <td class="text-muted fw-semibold">{{ item.date }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-light text-dark text-capitalize px-3 border">
+                                            {{ item.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.description|default('No specific target notes.') }}</td>
+                                    <td>
+                                        {% if item.completed %}
+                                        <span class="text-success"><i class="fas fa-circle-check me-1"></i> Completed</span>
+                                        {% else %}
+                                        <span class="text-warning"><i class="fas fa-clock me-1"></i> Planned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Week View (default compact) -->
+    <div id="view-week">
+        <div class="row row-cols-1 row-cols-md-7 g-2 mb-4">
+            {% if week_days and week_days|length > 0 %}
+            {% for day in week_days %}
+            <div class="col">
+                <div class="card border-0 shadow-sm h-100 calendar-day-card {% if day.is_today %}border-top border-danger border-3{% endif %}">
+                    <div class="card-body p-2 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
+                            <span class="text-uppercase text-muted fw-bold" style="font-size: 11px;">{{ day.name[:3] }}</span>
+                            <span class="fw-semibold {% if day.is_today %}text-danger{% endif %}" style="font-size: 14px;">{{ day.date.day }}</span>
+                        </div>
+                        <div class="flex-grow-1 calendar-events-zone">
+                            {% for workout in day.workouts %}
+                            {% set sport_class = 'bg-running' if workout.type == 'running' else ('bg-cycling' if workout.type == 'cycling' else ('bg-strength' if workout.type == 'swimming' else 'strength')) %}
+                            <div class="p-2 mb-1 rounded text-white style-workout-strip {{ sport_class }}" data-activity-id="{{ workout.id }}" onclick="openActivity({{ workout.id }})" style="cursor:pointer;">
+                                <div class="fw-bold text-truncate">{{ workout.title|default('Workout') }}</div>
+                                <div class="d-flex justify-content-between text-white-50 mt-1 small">
+                                    <span>{{ workout.distance }}k</span>
+                                    <span>{{ workout.time }}</span>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="text-center text-muted my-3 py-2" style="font-size: 11px; opacity: 0.4;">Rest</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            {# sample week when no data provided #}
+            {% for i in range(7) %}
+            <div class="col">
+                <div class="card border-0 shadow-sm h-100 calendar-day-card">
+                    <div class="card-body p-2 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
+                            <span class="text-uppercase text-muted fw-bold" style="font-size: 11px;">Day {{ i+1 }}</span>
+                            <span class="fw-semibold" style="font-size: 14px;">{{ 10 + i }}</span>
+                        </div>
+                        <div class="flex-grow-1 calendar-events-zone">
+                            <div class="p-2 mb-1 rounded text-white style-workout-strip bg-running">
+                                <div class="fw-bold text-truncate">Easy Run</div>
+                                <div class="d-flex justify-content-between text-white-50 mt-1 small"><span>8k</span><span>45:00</span></div>
+                            </div>
+                            <div class="p-2 mb-1 rounded text-white style-workout-strip bg-cycling">
+                                <div class="fw-bold text-truncate">Spin</div>
+                                <div class="d-flex justify-content-between text-white-50 mt-1 small"><span>20k</span><span>60:00</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Month View (limited to current month) -->
+    <div id="view-month" style="display:none;">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body p-3">
+                <div class="table-responsive">
+                    <table class="table table-borderless calendar-month-table">
+                        <thead>
+                            <tr>
+                                <th>Sun</th>
+                                <th>Mon</th>
+                                <th>Tue</th>
+                                <th>Wed</th>
+                                <th>Thu</th>
+                                <th>Fri</th>
+                                <th>Sat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if calendar_month_weeks and calendar_month_weeks|length > 0 %}
+                            {% for week in calendar_month_weeks %}
+                            <tr>
+                                {% for day in week %}
+                                <td class="align-top p-2 {% if not day.in_month %}text-muted bg-light{% endif %}">
+                                    <div class="small fw-semibold mb-2">{{ day.date.day }}</div>
+                                    <div class="activity-chart-container">
+                                        {% set activities = day.activities|default([]) %}
+                                        {% if activities|length > 0 %}
+                                            {% set running_count = activities|selectattr('type', 'equalto', 'running')|list|length %}
+                                            {% set cycling_count = activities|selectattr('type', 'equalto', 'cycling')|list|length %}
+                                            {% set swimming_count = activities|selectattr('type', 'equalto', 'swimming')|list|length %}
+                                            {% set strength_count = activities|selectattr('type', 'equalto', 'strength')|list|length %}
+                                            {% set total = activities|length %}
+                                            <div class="activity-chart d-flex rounded overflow-hidden" style="height: 24px; cursor: pointer;" onclick="event.stopPropagation();" title="{% for workout in activities %}{{ workout.title }} ({{ workout.type }}) {% endfor %}">
+                                                {% if running_count > 0 %}
+                                                <div class="chart-segment bg-running" style="flex: {{ (running_count / total * 100)|int }}%;"></div>
+                                                {% endif %}
+                                                {% if cycling_count > 0 %}
+                                                <div class="chart-segment bg-cycling" style="flex: {{ (cycling_count / total * 100)|int }}%;"></div>
+                                                {% endif %}
+                                                {% if swimming_count > 0 %}
+                                                <div class="chart-segment bg-swimming" style="flex: {{ (swimming_count / total * 100)|int }}%;"></div>
+                                                {% endif %}
+                                                {% if strength_count > 0 %}
+                                                <div class="chart-segment bg-strength" style="flex: {{ (strength_count / total * 100)|int }}%;"></div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="text-muted small text-center py-2" style="opacity: 0.5;">—</div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            {# sample month grid (5 weeks) #}
+                            {% for w in range(5) %}
+                            <tr>
+                                {% for d in range(7) %}
+                                <td class="align-top p-2">
+                                    <div class="small fw-semibold mb-2">{{ (w*7 + d + 1) }}</div>
+                                    <div class="activity-chart-container">
+                                        <div class="activity-chart d-flex rounded overflow-hidden" style="height: 24px;">
+                                            <div class="chart-segment bg-running" style="flex: 50%;"></div>
+                                            <div class="chart-segment bg-cycling" style="flex: 50%;"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Year View (compact months overview) -->
+    <div id="view-year" style="display:none;">
+        <div class="row g-3"> <!--
+            {% for month in year_months|default([]) %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body small">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-semibold">{{ month.name }}</div>
+                            <div class="text-muted">{{ month.activity_count|default(0) }}</div>
+                        </div>
+                        <div class="text-muted small">{{ month.distance|default(0) }} km</div>
+                    </div>
+                </div>
+            </div> 
+            {% endfor %} -->
+        </div>
+    </div>
+
+    <!-- Micro Detail Split View -->
+    <!-- removed duplicated micro detail view (moved above the calendar grid) -->
+</div>
+
+<style>
+    :root{ --accent:#dc3545; --accent-2:#ff6b6b; --muted-bg:#f8f9fa; }
+    .calendar-day-card { min-height: 180px; transition: transform 0.15s ease; }
+    .calendar-day-card:hover { transform: translateY(-2px); }
+    .style-workout-strip { opacity: 0.95; transition: opacity 0.2s; font-size: 12px; }
+    .style-workout-strip:hover { opacity: 1; }
+    .bg-running { background: linear-gradient(90deg,var(--accent),var(--accent-2)) !important; }
+    .bg-cycling { background: linear-gradient(90deg,#28a745,#66d88a) !important; }
+    .bg-swimming { background: linear-gradient(90deg,#007bff,#66b0ff) !important; }
+    .bg-strength { background: linear-gradient(90deg,#e5ca18,#e8d557) !important; }
+    .calendar-month-table td { min-width: 100px; vertical-align: top; border: 1px solid #eee; }
+    /* Activity chart styling */
+    .activity-chart { box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.2s; }
+    .activity-chart:hover { box-shadow: inset 0 1px 3px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1); }
+    .chart-segment { transition: flex 0.3s ease; position: relative; }
+    .chart-segment:hover { opacity: 0.9; }
+    /* active view button */s
+    .btn-group .btn.active, .btn-group .btn.active:focus, .btn-group .btn.active:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .calendar-day-card.border-top { box-shadow: 0 6px 18px rgba(220,53,69,0.06); }
+    /* transition animations for prev/next */
+    @keyframes slideOutLeft { from { transform: translateX(0); opacity:1 } to { transform: translateX(-18px); opacity:0 } }
+    @keyframes slideInLeft { from { transform: translateX(18px); opacity:0 } to { transform: translateX(0); opacity:1 } }
+    @keyframes slideOutRight { from { transform: translateX(0); opacity:1 } to { transform: translateX(18px); opacity:0 } }
+    @keyframes slideInRight { from { transform: translateX(-18px); opacity:0 } to { transform: translateX(0); opacity:1 } }
+    .anim-out-left { animation: slideOutLeft 280ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .anim-in-left { animation: slideInLeft 340ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .anim-out-right { animation: slideOutRight 280ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .anim-in-right { animation: slideInRight 340ms cubic-bezier(.2,.8,.2,1) forwards; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Logic to hightlight navbar link
+const links = document.getElementsByClassName('nav-link');
+const current = links[1];
+current.classList.add('active1');
+
+// Helper to open activity detail page
+window.openActivity = function(id){ if(!id) return; window.location.href = '/activity/' + id; };
+
+
+// Calendar view toggle: respects query param ?view=week|month|year
+document.addEventListener('DOMContentLoaded', function(){
+    const calendar_info = document.getElementById('calendar-info');
+
+    // state
+    var currentWeekStart = null; // ISO YYYY-MM-DD for the Sunday's date shown
+    var currentMonth = { year: null, month: null };
+    var currentYear = null;
+
+    function setView(view, suppressFetch){
+        ['week','month','year'].forEach(function(v){
+            var el = document.getElementById('view-'+v);
+            if (!el) return;
+            el.style.display = (v===view) ? '' : 'none';
+        });
+        document.querySelectorAll('[data-view]').forEach(function(b){
+            if (b.getAttribute('data-view')===view) b.classList.add('active'); else b.classList.remove('active');
+        });
+        var url = new URL(window.location.href);
+        url.searchParams.set('view', view);
+        window.history.replaceState({}, '', url);
+        if (!suppressFetch) {
+            if (view === 'week') fetchWeek();
+            if (view === 'month') fetchMonth();
+            if (view === 'year') fetchYear();
+        }
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    var init = params.get('view') || '{{ request.args.get("view")|default("week") }}' || 'week';
+    if (!['week','month','year'].includes(init)) init = 'week';
+    setView(init);
+
+    document.querySelectorAll('[data-view]').forEach(function(btn){ btn.addEventListener('click', function(){ setView(btn.getAttribute('data-view')); }); });
+
+    document.getElementById('nav-prev').addEventListener('click', function(){
+        var view = document.querySelector('[data-view].active')?.getAttribute('data-view') || 'week';
+        if (view === 'week') {
+            var base = currentWeekStart ? new Date(currentWeekStart) : new Date();
+            base.setDate(base.getDate() - 7);
+            fetchWeek(base.toISOString().slice(0,10), 'prev');
+        } else if (view === 'month') {
+            var y = currentMonth.year || (new Date().getFullYear());
+            var m = (currentMonth.month) || (new Date().getMonth()+1);
+            m -= 1; if (m < 1) { m = 12; y -= 1; }
+            fetchMonth(y, m, 'prev');
+        } else if (view === 'year') {
+            var y = currentYear || (new Date().getFullYear());
+            fetchYear(y - 1, 'prev');
+        }
+    });
+
+    document.getElementById('nav-next').addEventListener('click', function(){
+        var view = document.querySelector('[data-view].active')?.getAttribute('data-view') || 'week';
+        if (view === 'week') {
+            var base = currentWeekStart ? new Date(currentWeekStart) : new Date();
+            base.setDate(base.getDate() + 7);
+            fetchWeek(base.toISOString().slice(0,10), 'next');
+        } else if (view === 'month') {
+            var y = currentMonth.year || (new Date().getFullYear());
+            var m = (currentMonth.month) || (new Date().getMonth()+1);
+            m += 1; if (m > 12) { m = 1; y += 1; }
+            fetchMonth(y, m, 'next');
+        } else if (view === 'year') {
+            var y = currentYear || (new Date().getFullYear());
+            fetchYear(y + 1, 'next');
+        }
+    });
+
+    function fetchWeek(start_iso, direction){
+        calendar_info.textContent = 'Current week summary and weekly details';
+
+        var container = document.getElementById('view-week');
+        var outClass = null, inClass = null;
+        if (direction === 'next') { outClass='anim-out-left'; inClass='anim-in-left'; }
+        else if (direction === 'prev') { outClass='anim-out-right'; inClass='anim-in-right'; }
+        if (outClass) container.classList.add(outClass);
+        var url = '/api/calendar/week';
+        if (start_iso) url += '?start=' + encodeURIComponent(start_iso);
+        fetch(url).then(r=>r.json()).then(function(data){
+            renderWeek(data);
+            if (outClass) container.classList.remove(outClass);
+            if (inClass) {
+                container.classList.add(inClass);
+                container.addEventListener('animationend', function cb(){ container.classList.remove(inClass); container.removeEventListener('animationend', cb); });
+            }
+        }).catch(function(err){
+            console.error(err);
+            if (outClass) container.classList.remove(outClass);
+        });
+    }
+
+    function renderWeek(data){
+        if (!data || !data.week_days) return;
+        currentWeekStart = data.week_days[0].date;
+        var container = document.getElementById('view-week');
+        if (!container) return;
+        var html = '<div class="row row-cols-1 row-cols-md-7 g-2 mb-4">';
+        data.week_days.forEach(function(day){
+            html += '<div class="col">';
+            html += '<div class="card border-0 shadow-sm h-100 calendar-day-card">';
+            html += '<div class="card-body p-2 d-flex flex-column">';
+            html += '<div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">';
+            html += '<span class="text-uppercase text-muted fw-bold" style="font-size:11px;">'+ day.name.slice(0,3) +'</span>';
+            html += '<span class="fw-semibold" style="font-size:14px;">'+ new Date(day.date).getDate() +'</span>';
+            html += '</div>';
+            html += '<div class="flex-grow-1 calendar-events-zone">';
+            if (day.workouts && day.workouts.length>0) {
+                day.workouts.forEach(function(w){
+                    var cls = w.type === 'running' ? 'bg-running' : (w.type === 'cycling' ? 'bg-cycling' : (w.type === 'cycling' ? 'bg-swimming' : 'bg-strength'));
+                    var aid = (w.id!==undefined && w.id!==null) ? w.id : '';
+                    html += '<div class="p-2 mb-1 rounded text-white style-workout-strip '+cls+'" data-activity-id="'+aid+'" onclick="openActivity('+aid+')" style="cursor:pointer;">';
+                    html += '<div class="fw-bold text-truncate">'+ (w.title||w.type) +'</div>';
+                    html += '<div class="d-flex justify-content-between text-white-50 mt-1 small"><span>'+ (w.distance||'') + 'k</span><span>'+ (w.time||'') +'</span></div>';
+                    html += '</div>';
+                });
+            } else {
+                html += '<div class="text-center text-muted my-3 py-2" style="font-size:11px;opacity:0.4;">Rest</div>';
+            }
+            html += '</div></div></div></div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function fetchMonth(year, month, direction){
+                calendar_info.textContent = 'Current week summary and montly details';
+
+
+        var container = document.getElementById('view-month');
+        var outClass = null, inClass = null;
+        if (direction === 'next') { outClass='anim-out-left'; inClass='anim-in-left'; }
+        else if (direction === 'prev') { outClass='anim-out-right'; inClass='anim-in-right'; }
+        if (outClass) container.classList.add(outClass);
+        var url = '/api/calendar/month';
+        if (year && month) url += '?year='+year+'&month='+month;
+        fetch(url).then(r=>r.json()).then(function(data){
+            renderMonth(data);
+            if (outClass) container.classList.remove(outClass);
+            if (inClass) {
+                container.classList.add(inClass);
+                container.addEventListener('animationend', function cb(){ container.classList.remove(inClass); container.removeEventListener('animationend', cb); });
+            }
+        }).catch(function(err){ console.error(err); if (outClass) container.classList.remove(outClass); });
+    }
+
+    function renderMonth(data){
+        if (!data) return;
+        currentMonth.year = data.year; currentMonth.month = data.month;
+        var container = document.getElementById('view-month');
+        if (!container) return;
+        var html = '<div class="card mb-4 shadow-sm"><div class="card-body p-3"><div class="table-responsive"><table class="table table-borderless calendar-month-table">';
+        html += '<thead><tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead><tbody>';
+        (data.calendar_month_weeks||[]).forEach(function(week){
+            html += '<tr>';
+            week.forEach(function(day){
+                var cls = day.in_month ? '' : 'text-muted bg-light';
+                html += '<td class="align-top p-2 '+cls+'">';
+                html += '<div class="small fw-semibold mb-2">'+ new Date(day.date).getDate() +'</div>';
+                
+                var activities = day.activities || [];
+                if (activities.length > 0) {
+                    // Count activity types
+                    var counts = { running: 0, cycling: 0, swimming: 0, strength: 0 };
+                    var activityList = [];
+                    activities.forEach(function(w) {
+                        var type = w.type || 'strength';
+                        if (counts.hasOwnProperty(type)) counts[type]++;
+                        activityList.push(w.title + ' (' + type + ')');
+                    });
+                    var total = activities.length;
+                    
+                    // Build activity chart with click handler to navigate to week view
+                    var tooltipText = activityList.join(', ').replace(/"/g, '&quot;');
+                    html += '<div class="activity-chart d-flex rounded overflow-hidden" style="height: 24px; cursor: pointer;" title="' + tooltipText + '" data-date="' + day.date + '">';
+                    if (counts.running > 0) html += '<div class="chart-segment bg-running" style="flex: ' + Math.round((counts.running / total) * 100) + '%;"></div>';
+                    if (counts.cycling > 0) html += '<div class="chart-segment bg-cycling" style="flex: ' + Math.round((counts.cycling / total) * 100) + '%;"></div>';
+                    if (counts.swimming > 0) html += '<div class="chart-segment bg-swimming" style="flex: ' + Math.round((counts.swimming / total) * 100) + '%;"></div>';
+                    if (counts.strength > 0) html += '<div class="chart-segment bg-strength" style="flex: ' + Math.round((counts.strength / total) * 100) + '%;"></div>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="text-muted small text-center py-2" style="opacity: 0.5;">—</div>';
+                }
+                html += '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table></div></div></div>';
+        container.innerHTML = html;
+        
+        // Attach click handlers to activity charts
+        document.querySelectorAll('.activity-chart').forEach(function(chart) {
+            chart.addEventListener('click', function() {
+                var dateStr = this.getAttribute('data-date');
+                if (dateStr) navigateToWeek(dateStr);
+            });
+        });
+    }
+
+    function navigateToWeek(dateStr) {
+        // Calculate the Monday of the week containing this date
+        var date = new Date(dateStr);
+        var dayOfWeek = date.getDay();
+        var diff = date.getDate() - ((dayOfWeek + 6) % 7);
+        var monday = new Date(date.setDate(diff));
+        var mondayISO = monday.toISOString().slice(0, 10);
+        
+        // Switch to week view and fetch that specific week
+        setView('week', true);
+        fetchWeek(mondayISO);
+    }
+
+    function fetchYear(year, direction){
+        calendar_info.textContent = 'Current week summary and yearly details';
+
+
+        var container = document.getElementById('view-year');
+        var outClass = null, inClass = null;
+        if (direction === 'next') { outClass='anim-out-left'; inClass='anim-in-left'; }
+        else if (direction === 'prev') { outClass='anim-out-right'; inClass='anim-in-right'; }
+        if (outClass) container.classList.add(outClass);
+        var url = '/api/calendar/year';
+        if (year) url += '?year='+year;
+        fetch(url).then(r=>r.json()).then(function(data){
+            renderYear(data);
+            if (outClass) container.classList.remove(outClass);
+            if (inClass) {
+                container.classList.add(inClass);
+                container.addEventListener('animationend', function cb(){ container.classList.remove(inClass); container.removeEventListener('animationend', cb); });
+            }
+        }).catch(function(err){ console.error(err); if (outClass) container.classList.remove(outClass); });
+    }
+
+    function renderYear(data){
+        if (!data) return;
+        currentYear = data.year;
+        var container = document.getElementById('view-year');
+        if (!container) return;
+        var html = '<div class="row g-3">';
+        (data.months||[]).forEach(function(m){
+            html += '<div class="col-6 col-md-4 col-lg-3"><div class="card shadow-sm h-100"><div class="card-body small">';
+            html += '<div class="d-flex justify-content-between align-items-center mb-2"><div class="fw-semibold">'+ m.name +'</div><div class="text-muted">'+ (m.activity_count||0) +'</div></div>';
+            html += '<div class="text-muted small">'+ (m.distance||0) +' km</div>';
+            html += '<div class="text-muted small">'+ (m.elevation||0) +' m+</div></div></div></div>';
+
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}

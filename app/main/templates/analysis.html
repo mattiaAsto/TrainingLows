@@ -1,0 +1,122 @@
+{% extends "main_base.html" %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0" style="color:#333; font-weight:600;">Performance Analysis</h2>
+            <div class="text-muted small">Alternative layout with deeper insights</div>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary btn-sm" href="#">Export CSV</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Key Metrics</h5>
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3 py-3 border-end">
+                            <div class="text-muted small">Avg Weekly Load</div>
+                            <div class="fs-4 fw-bold">{{ avg_weekly_load|default('—') }}</div>
+                        </div>
+                        <div class="col-6 col-md-3 py-3 border-end">
+                            <div class="text-muted small">Consistency</div>
+                            <div class="fs-4 fw-bold">{{ consistency|default('—') }}</div>
+                        </div>
+                        <div class="col-6 col-md-3 py-3 border-end">
+                            <div class="text-muted small">Best Pace (30d)</div>
+                            <div class="fs-4 fw-bold">{{ best_pace|default('—') }}</div>
+                        </div>
+                        <div class="col-6 col-md-3 py-3">
+                            <div class="text-muted small">Training Stress</div>
+                            <div class="fs-4 fw-bold">{{ training_stress|default('—') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Pace & Speed Trends</h5>
+                    <div class="chart-container" style="height:320px;">
+                        <canvas id="paceSpeedChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Intensity Breakdown</h6>
+                    <div class="chart-container" style="height:200px;"><canvas id="intensityDonut"></canvas></div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title">Recent Achievements</h6>
+                    <ul class="list-unstyled mb-0">
+                        {% for a in achievements|default([]) %}
+                        <li class="mb-2">
+                            <div class="fw-semibold">{{ a.title }}</div>
+                            <div class="text-muted small">{{ a.date }} • {{ a.detail }}</div>
+                        </li>
+                        {% else %}
+                        <li class="text-muted">No achievements yet.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Personal Records</h5>
+                    <div class="row">
+                        {% for pr in pr_list|default([]) %}
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 border rounded bg-white">
+                                <div class="fw-semibold">{{ pr.name }}</div>
+                                <div class="text-muted small">{{ pr.details }}</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-muted">No PRs yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+// Logic to hightlight navbar link
+const links = document.getElementsByClassName('nav-link');
+const current = links[3];
+current.classList.add('active1');
+</script>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+    :root{ --accent:#dc3545; --muted:#f6f7f8; }
+    .card .card-body h5, .card .card-title { color: #333; }
+    .kpi { background: linear-gradient(90deg, rgba(220,53,69,0.06), rgba(255,255,255,0)); border-radius:8px; }
+    .achievement-badge { display:inline-block; padding:4px 8px; border-radius:999px; background: linear-gradient(90deg,#ffd6d9,#ffc2c6); color:#721c24; font-weight:600; }
+    .card-accent { border-left: 4px solid var(--accent); }
+</style>
+{% endblock %}

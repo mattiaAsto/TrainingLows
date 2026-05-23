@@ -32,9 +32,13 @@ def create_app():
     db_user = os.getenv("DB_USER")
     db_password = os.getenv("DB_PASSWORD")
     db_hostname = os.getenv("DB_HOSTNAME")
+    db_port = os.getenv("DB_PORT")
     db_name = os.getenv("DB_NAME")
 
-    db_complete_url = os.getenv("DB_COMPLETE_URL")
+    db_complete_url = os.getenv("DB_COMPLETE_URL", None)
+
+    if not db_complete_url:
+        db_complete_url = f'mysql+pymysql://{db_user}:{db_password}@{db_hostname}:3306/{db_name}'
 
     mail_server = str(os.getenv("MAIL_SERVER"))
     mail_port = int(os.getenv("MAIL_PORT"))

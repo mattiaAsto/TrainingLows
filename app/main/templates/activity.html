@@ -1,0 +1,42 @@
+{% extends "main_base.html" %}
+
+{% block body %}
+<div class="container p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">{{ activity.title|capitalize}}</h2>
+            <div class="text-muted small">{{ activity.activity_type|capitalize }} • {{ activity.date.strftime('%b %d, %Y %H:%M') if activity.date else '' }}</div>
+        </div>
+        <div>
+            <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-secondary">Back to Calendar</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <dl class="row">
+                        <dt class="col-6">Type</dt><dd class="col-6 text-end text-capitalize">{{ activity.activity_type }}</dd>
+                        <dt class="col-6">Distance</dt><dd class="col-6 text-end">{{ activity.distance_km|default('-') }} km</dd>
+                        <dt class="col-6">Duration</dt><dd class="col-6 text-end">{{ activity.get_duration_formatted() if activity.get_duration_formatted is defined else '-' }}</dd>
+                        <dt class="col-6">Average Pace</dt><dd class="col-6 text-end">{{ activity.avg_pace|default('-') }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-8">
+                    <h5>Notes</h5>
+                    <p class="text-muted">{{ activity.description|default('No additional notes for this activity.') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// highlight calendar nav when viewing an activity
+try{ document.querySelectorAll('.nav-link')[1].classList.add('active1'); }catch(e){}
+</script>
+{% endblock %}

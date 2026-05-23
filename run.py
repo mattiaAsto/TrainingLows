@@ -37,6 +37,7 @@ with app.app_context():
 
     meta.reflect(bind=db.engine)
     meta.drop_all(bind=db.engine)
+    print("----- DB DROPPED -----")
 
     db.create_all()
 
@@ -45,6 +46,59 @@ with app.app_context():
     db.session.commit()
 
     print("Admin added to database")
+    # create an Athlete profile for the admin user (if not present) and add a default activity dated today
+    try:
+        if not Athlete.query.get(admin.id):
+            athlete = Athlete(id=admin.id, sport='running', date_of_birth=None)
+            db.session.add(athlete)
+            db.session.commit()
+            print(f"Athlete profile created for admin (id={admin.id})")
+    except Exception as e:
+        print("Warning creating athlete profile:", e)
+
+    try:
+        # only add a default activity if the athlete has no activities yet
+        existing = Activity.query.filter_by(athlete_id=admin.id).first()
+        if not existing:
+            now = datetime.now()
+            default_run = Running(
+                athlete_id=admin.id,
+                title = "prova",
+                duration_seconds=3600,
+                distance_km=10.0,
+                calories_burned=600,
+                elevation_gain_m=50.0,
+                intensity='moderate',
+                description='Default run created at setup',
+                date=now
+            )
+            db.session.add(default_run)
+            db.session.commit()
+            print(f"Default activity created (id={default_run.id}) for athlete {admin.id}")
+    except Exception as e:
+        print("Warning creating default activity:", e)
+
+    try:
+        # only add a default activity if the athlete has no activities yet
+        existing = Activity.query.filter_by(athlete_id=admin.id).first()
+        if existing:
+            now = datetime.now() + timedelta(days=-6)
+            default_run = Running(
+                athlete_id=admin.id,
+                title = "prova",
+                duration_seconds=3600,
+                distance_km=10.0,
+                calories_burned=600,
+                elevation_gain_m=50.0,
+                intensity='moderate',
+                description='Default run created at setup',
+                date=now
+            )
+            db.session.add(default_run)
+            db.session.commit()
+            print(f"Default activity created (id={default_run.id}) for athlete {admin.id}")
+    except Exception as e:
+        print("Warning creating default activity:", e)
 
 system=1
 

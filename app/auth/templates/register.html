@@ -114,6 +114,13 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
+
+        .btn-register:focus {
+            background-color: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
         
         .btn-register:active {
             transform: translateY(0);
@@ -209,17 +216,6 @@
             </div>
 
             <div class="mb-3">
-                <label for="date_of_birth" class="form-label">Date of Birth</label>
-                <input 
-                    type="date" 
-                    class="form-control" 
-                    id="date_of_birth" 
-                    name="date_of_birth" 
-                    required
-                >
-            </div>
-
-            <div class="mb-3">
                 <label for="gender" class="form-label">Gender</label>
                 <select 
                     class="form-control" 
@@ -287,6 +283,17 @@
                         <option value="Other">Other</option>
                     </select>
                 </div>
+
+                <div class="mb-3">
+                <label for="date_of_birth" class="form-label">Date of Birth</label>
+                <input 
+                    type="date" 
+                    class="form-control" 
+                    id="date_of_birth" 
+                    name="date_of_birth" 
+                    required
+                >
+            </div>
             </div>
 
             <!-- Coach Section -->

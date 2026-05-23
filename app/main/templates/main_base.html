@@ -9,6 +9,8 @@
         rel="stylesheet" 
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB   " 
         crossorigin="anonymous">
+    <script src="{{url_for('main.static', filename='script.js')}}"></script>
+    <!--script src="https://cdn.jsdelivr.net/npm/chart.js"></script-->
     
     <title>{% block title %}TrainingLows{% endblock %}</title>
     
@@ -60,6 +62,11 @@
             color: #dc3545;
             transition: color 0.3s ease;
         }
+
+        .nav-link.active1 {
+            color: #dc3545;
+            font-weight: 600;
+        }
         
         .navbar-toggler:hover i {
             color: #dc3545;
@@ -85,6 +92,36 @@
         .navbar-toggler i {
             font-size: 25px;
             color: #333;
+        }
+        
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+        }
+        
+        .dropdown-item {
+            color: #333;
+            font-size: 14px;
+            padding: 10px 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f5f5f5;
+            color: #dc3545;
+        }
+        
+        .dropdown-item.active, .dropdown-item:active {
+            background-color: transparent;
+            color: #dc3545;
+        }
+        
+        .mobile-user-header {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            color: #333;
+            font-size: 15px;
         }
         
         footer {
@@ -116,24 +153,44 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav mx-auto d-none d-md-flex" style="padding-left: 20px;">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('main.test')}}">Home</a>
+                            <a class="nav-link" href="{{url_for('main.home')}}">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('strava.connect')}}">Calendar</a>
+                            <a class="nav-link" href="{{url_for('main.calendar')}}">Calendar</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">Graphs</a>
+                            <a class="nav-link" href="{{url_for('main.graphs')}}">Graphs</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">Analysis</a>
+                            <a class="nav-link" href="{{url_for('main.analysis')}}">Analysis</a>
                         </li>
                     </ul>
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav ms-auto d-none d-md-flex">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userProfileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <strong>{{user.first_name}} {{user.last_name}}</strong>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdown">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                                <li><a class="dropdown-item" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <!-- Mobile menu items -->
+                    <div class="d-md-none mt-3 mb-2 ps-3 mobile-user-header">
+                        <p class="mb-0"><strong>{{user.first_name}} {{user.last_name}}</strong></p>
+                    </div>
+                    <ul class="navbar-nav d-md-none">
                         <li class="nav-item">
-                            <a class="nav-link" href="#"><strong>{{user.first_name}} {{user.last_name}}</strong></a>
+                            <a class="nav-link" href="#"><i class="fas fa-cog"></i> Settings</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('auth.logout')}}">Logout</a>
+                            <a class="nav-link" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                         </li>
                     </ul>
                 </div>
@@ -168,19 +225,19 @@
 
     <nav class="navbar fixed-bottom bg-light d-md-none border-top">
         <div class="container-fluid justify-content-around">
-            <a class="nav-link text-center" href="#">
+            <a class="nav-link text-center" href="{{url_for('main.home')}}">
                 <i class="fas fa-house"></i>
                 <div style="font-size: 12px;">Home</div>
             </a>
-            <a class="nav-link text-center" href="#">
+            <a class="nav-link text-center" href="{{url_for('main.calendar')}}">
                 <i class="fas fa-calendar"></i>
                 <div style="font-size: 12px;">Calendar</div>
             </a>
-            <a class="nav-link text-center" href="#">
+            <a class="nav-link text-center" href="{{url_for('main.graphs')}}">
                 <i class="fas fa-arrow-trend-up"></i>
                 <div style="font-size: 12px;">Graphs</div>
             </a>
-            <a class="nav-link text-center" href="#">
+            <a class="nav-link text-center" href="{{url_for('main.analysis')}}">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <div style="font-size: 12px;">Analysis</div>
             </a>
@@ -195,19 +252,28 @@
         const navbarCollapse = document.getElementById('navbarNav');
         const toggleIcon = document.getElementById('navToggleIcon');
         
-        navbarCollapse.addEventListener('show.bs.collapse', function () {
-            toggleIcon.classList.remove('fa-bars');
-            toggleIcon.classList.add('fa-bars-staggered');
-        });
-        
-        navbarCollapse.addEventListener('hide.bs.collapse', function () {
-            toggleIcon.classList.remove('fa-bars-staggered');
-            toggleIcon.classList.add('fa-bars');
-        });
+        if (toggleIcon) {
+            navbarCollapse.addEventListener('show.bs.collapse', function () {
+                toggleIcon.classList.remove('fa-bars');
+                toggleIcon.classList.add('fa-bars-staggered');
+            });
+            
+            navbarCollapse.addEventListener('hide.bs.collapse', function () {
+                toggleIcon.classList.remove('fa-bars-staggered');
+                toggleIcon.classList.add('fa-bars');
+            });
+        }
     </script>
 
     {% block activeLink %}
 
     {% endblock %}
+
+    {% block scripts %}
+    {% endblock %}
+
+    {% block styles %}
+    {% endblock %}
+
 </body>
 </html>
