@@ -15,32 +15,31 @@ import random
 import bcrypt
 import calendar as _calendar
 
-def get_current_week_activities(): #returns the list .reverse() -ed
+def get_week_activities(date_start: datetime, date_stop: datetime): #returns the list .reverse() -ed
 
-    tomorrow = date.today() + timedelta(days=1) #query until tomorrow becaus the request is exclusive 
-    start_weekday = tomorrow - timedelta(days=tomorrow.weekday())
 
     activities = Activity.query.filter(
-        Activity.date >= start_weekday,
-        Activity.date < tomorrow + timedelta(days=1)
+        Activity.date >= date_start,
+        Activity.date < date_stop + timedelta(days=1)
         ).all()
     
-    activities = activities[::-1] #reversing the list so it shows latest first in the homepage
-
     return activities
 
-def create_current_week_stats_from_activities(activities):
+def create_week_stats_from_activities(activities):
     total_distance = 0
     total_elev = 0
     total_cal = 0
     total_time_s = 0
 
     for activity in activities:
-        total_distance += activity.distance_km if activity.distance_km else 0
+        print()
+        total_distance += round(activity.distance_km, 1) if activity.distance_km else 0
         total_elev += activity.elevation_gain_m if activity.elevation_gain_m  else 0
         total_cal += activity.calories_burned if activity.calories_burned else 0
         total_time_s += activity.duration_seconds
-        
+
+    total_distance = f'{total_distance:.1f}'
+    
     total_h = total_time_s // 3600
     total_min = (total_time_s - total_h * 3600) // 60
 
@@ -77,12 +76,16 @@ def global_injection_dictionary():
 @main.route("/")
 def home():
 
-    week_activities = get_current_week_activities()
+    today = date.today() #query until tomorrow becaus the request is exclusive 
+    start_weekday = today - timedelta(days=today.weekday())
+
+    week_activities = get_week_activities(start_weekday, today)
+    week_activities = week_activities[::-1]
 
 
     return render_template("home.html", 
                            recent_activities = week_activities, 
-                           this_week = create_current_week_stats_from_activities(week_activities)
+                           this_week = create_week_stats_from_activities(week_activities)
                            )
 
 
@@ -251,7 +254,27 @@ def api_calendar_year():
 
 @main.route("/graphs")
 def graphs():
-    return render_template("graphs.html")
+
+    weekly_data = {
+        "labels": [],
+        "distances": [],
+    }
+    
+    next_sunday = date.today() + timedelta(days=6-(date.today().weekday()))
+
+
+    for i in range(9,-1,-1):
+        stop = next_sunday + timedelta(weeks=-i)
+        start = next_sunday + timedelta(weeks=-(i+1)) + timedelta(days=1)
+
+        week_activities = get_week_activities(start, stop)
+
+        distance = create_week_stats_from_activities(week_activities)["total_distance"]
+
+        weekly_data["labels"].append(stop.strftime("%Y-%m-%d"))
+        weekly_data["distances"].append(distance)
+    
+    return render_template("graphs.html", weekly_data=weekly_data)
 
 
 @main.route("/analysis")

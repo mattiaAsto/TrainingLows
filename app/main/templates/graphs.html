@@ -66,9 +66,7 @@
 
     </div>
 
-    <!--Graphs-->
-    <script src="{{url_for('main.static', filename='charts.js')}}"></script>
-    
+    <!--Graphs-->    
 
     <script>
     // Logic to hightlight navbar link
@@ -91,7 +89,32 @@
                 ctx.fillText('Chart placeholder - load Chart.js in base template', 10,20);
             });
         }
+
+        const weekly_distance_data = {{weekly_data|tojson}};
+
+        console.log(weekly_distance_data)
+
+        const ctx = document.getElementById('weeklyDistanceChart').getContext('2d');
+        const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: weekly_distance_data.labels,
+            datasets: [{
+            label: 'Distance (km)',
+            data: weekly_distance_data.distances,
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220,53,69,0.1)',
+            tension: 0.2,
+            fill: true,
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+        });
+
     });
+
+        
+
     </script>
 
 {% endblock %}
