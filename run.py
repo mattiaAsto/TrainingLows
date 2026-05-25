@@ -77,16 +77,31 @@ with app.app_context():
                                             minutes=random.randint(0, 59))
 
                 activity_type = random.choice(["running", "swimming", "cycling", "strength"])
+                duration = random.randint(1800, 7200) if activity_type != "cycling" else random.randint(3600, 14400)
+                
+                # Distribute duration across 5 zones randomly
+                zone_splits = [random.randint(0, 100) for _ in range(5)]
+                total_splits = sum(zone_splits) or 1
+                timez1 = int(duration * zone_splits[0] / total_splits)
+                timez2 = int(duration * zone_splits[1] / total_splits)
+                timez3 = int(duration * zone_splits[2] / total_splits)
+                timez4 = int(duration * zone_splits[3] / total_splits)
+                timez5 = duration - timez1 - timez2 - timez3 - timez4
 
                 if activity_type == "running":
                     activity = Running(
                         athlete_id=admin.id,
                         title=random.choice(running_titles),
-                        duration_seconds=random.randint(1800, 7200),
+                        duration_seconds=duration,
                         distance_km=round(random.uniform(3.0, 25.0), 1),
                         calories_burned=random.randint(200, 900),
                         elevation_gain_m=round(random.uniform(0, 300), 1),
                         intensity=random.choice(['low', 'moderate', 'high']),
+                        timez1_seconds=timez1,
+                        timez2_seconds=timez2,
+                        timez3_seconds=timez3,
+                        timez4_seconds=timez4,
+                        timez5_seconds=timez5,
                         description='Auto-generated running activity',
                         date=random_date,
                         pace_min_km=round(random.uniform(4.0, 7.0), 2),
@@ -102,6 +117,11 @@ with app.app_context():
                         calories_burned=random.randint(200, 700),
                         elevation_gain_m=0,
                         intensity=random.choice(['low', 'moderate', 'high']),
+                        timez1_seconds=timez1,
+                        timez2_seconds=timez2,
+                        timez3_seconds=timez3,
+                        timez4_seconds=timez4,
+                        timez5_seconds=timez5,
                         description='Auto-generated swimming activity',
                         date=random_date,
                         pool_length_m=random.choice([25, 50]),
@@ -113,11 +133,16 @@ with app.app_context():
                     activity = Cycling(
                         athlete_id=admin.id,
                         title=random.choice(cycling_titles),
-                        duration_seconds=random.randint(3600, 14400),
+                        duration_seconds=duration,
                         distance_km=round(random.uniform(10.0, 120.0), 1),
                         calories_burned=random.randint(300, 1200),
                         elevation_gain_m=round(random.uniform(0, 1500), 1),
                         intensity=random.choice(['low', 'moderate', 'high']),
+                        timez1_seconds=timez1,
+                        timez2_seconds=timez2,
+                        timez3_seconds=timez3,
+                        timez4_seconds=timez4,
+                        timez5_seconds=timez5,
                         description='Auto-generated cycling activity',
                         date=random_date,
                         speed_km_h=round(random.uniform(15.0, 40.0), 1),
@@ -134,6 +159,11 @@ with app.app_context():
                         calories_burned=random.randint(150, 600),
                         elevation_gain_m=None,
                         intensity=random.choice(['low', 'moderate', 'high']),
+                        timez1_seconds=timez1,
+                        timez2_seconds=timez2,
+                        timez3_seconds=timez3,
+                        timez4_seconds=timez4,
+                        timez5_seconds=timez5,
                         description='Auto-generated strength activity',
                         date=random_date,
                         strenght_type=random.choice(['maximal', 'resistance', 'power'])

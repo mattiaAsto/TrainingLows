@@ -12,7 +12,19 @@
         <div class="col-12 col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Weekly Distance Trend</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <h5 class="card-title mb-0 me-3">Weekly Distance Trend</h5>
+                            <div class="btn-group me-2" role="group" aria-label="graph view">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-graph-view="week">Week</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-graph-view="month">Month</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-graph-view="year">Year</button>
+                            </div>
+                        </div>
+                        <div>
+                            <button id="weeklyToggleBtn" class="btn btn-sm btn-outline-secondary" data-mode="specific">Show Total</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:260px;">
                         <canvas id="weeklyDistanceChart"></canvas>
                     </div>
@@ -23,7 +35,14 @@
         <div class="col-12 col-lg-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Activity Distribution</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">Activity Distribution</h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="activity distribution view">
+                            <button type="button" class="btn btn-outline-secondary active" data-timespan-target="activity" data-timespan="week">Week</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="month">Month</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="year">Year</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:260px;">
                         <canvas id="activityDonutChart"></canvas>
                     </div>
@@ -34,9 +53,16 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Monthly Distance (bar)</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">Calories by Activity Type</h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="calories view">
+                            <button type="button" class="btn btn-outline-secondary active" data-timespan-target="calories" data-timespan="week">Week</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="month">Month</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="year">Year</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:220px;">
-                        <canvas id="monthlyBarChart"></canvas>
+                        <canvas id="caloriesBarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -47,7 +73,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Intensity Distribution</h5>
                     <div class="chart-container" style="height:220px;">
-                        <canvas id="intensityChart"></canvas>
+                        <canvas id="intensityPolarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -56,9 +82,16 @@
         <div class="col-12 col-lg-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Big ass performance chart</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">Performance Summary</h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="performance view">
+                            <button type="button" class="btn btn-outline-secondary active" data-timespan-target="performance" data-timespan="week">Week</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="month">Month</button>
+                            <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="year">Year</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:400px;">
-                        <canvas id="intensityChart"></canvas>
+                        <canvas id="performanceRadarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -66,7 +99,7 @@
 
     </div>
 
-    <!--Graphs-->    
+    <!--Graphs-->  
 
     <script>
     // Logic to hightlight navbar link
@@ -88,28 +121,236 @@
                 ctx.font = '14px sans-serif';
                 ctx.fillText('Chart placeholder - load Chart.js in base template', 10,20);
             });
+            return;
         }
 
-        const weekly_distance_data = {{weekly_data|tojson}};
+        const weekly_distance_data_array = {{weekly_data_array|tojson}};
 
-        console.log(weekly_distance_data)
+        const colors = {
+            running: '#dc3545',
+            swimming: '#0d6efd',
+            cycling: '#198754',
+            strength: '#fd7e14'
+        };
 
-        const ctx = document.getElementById('weeklyDistanceChart').getContext('2d');
-        const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: weekly_distance_data.labels,
-            datasets: [{
-            label: 'Distance (km)',
-            data: weekly_distance_data.distances,
-            borderColor: '#dc3545',
-            backgroundColor: 'rgba(220,53,69,0.1)',
-            tension: 0.2,
-            fill: true,
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-        });
+        const intensityColors = {
+            z1: '#0dadfd',
+            z2: '#00e650',
+            z3: '#ffc107',
+            z4: '#fd7e14',
+            z5: '#dc3545'
+        };
+
+        // Helper to obtain activity type (support multiple keys from backend)
+        const getActivityType = (a) => a.activitytype || a.activity_type || a.activityType || a.type || 'activity';
+        const weeklyCtx = document.getElementById('weeklyDistanceChart').getContext('2d');
+        const donutCtx = document.getElementById('activityDonutChart').getContext('2d');
+        const caloriesBarCtx = document.getElementById('caloriesBarChart').getContext('2d');
+        const intensityCtx = document.getElementById('intensityPolarChart').getContext('2d');
+        const performanceCtx = document.getElementById('performanceRadarChart').getContext('2d');
+        let weeklyChart = null;
+        let donutChart = null;
+        let caloriesBarChart = null;
+        let intensityChart = null;
+        let performanceChart = null;
+
+        function renderGraph(dataArray) {
+            const labelsLocal = (dataArray.find(a => a.labels && a.labels.length) || {}).labels || [];
+            const ds = dataArray.map(a => {
+                const atype = getActivityType(a);
+                const border = colors[atype] ?? '#6c757d';
+                const bg = (colors[atype] ?? '#6c757d') + '1a';
+                return {
+                    label: (atype.charAt(0).toUpperCase() + atype.slice(1)),
+                    data: (a.distances || []).map(Number),
+                    borderColor: border,
+                    backgroundColor: bg,
+                    tension: 0.2,
+                    fill: true,
+                };
+            });
+            const total = [{
+                label: 'Total distance',
+                data: labelsLocal.map((_, idx) => dataArray.reduce((s, a) => s + Number((a.distances||[])[idx] || 0), 0)),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.12)',
+                tension: 0.2,
+                fill: true,
+            }];
+            if (weeklyChart) {
+                weeklyChart.destroy();
+                weeklyChart = null;
+            }
+            weeklyChart = new Chart(weeklyCtx, { type: 'line', data: { labels: labelsLocal, datasets: ds }, options: { responsive: true, maintainAspectRatio: false } });
+            const toggleBtn = document.getElementById('weeklyToggleBtn');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('data-mode', 'specific');
+                toggleBtn.textContent = 'Show Total';
+                toggleBtn.onclick = function(){
+                    const mode = this.getAttribute('data-mode') || 'specific';
+                    if (mode === 'specific') {
+                        weeklyChart.data.datasets = total; this.setAttribute('data-mode','total'); this.textContent='Show Activities';
+                    } else {
+                        weeklyChart.data.datasets = ds; this.setAttribute('data-mode','specific'); this.textContent='Show Total';
+                    }
+                    weeklyChart.update();
+                };
+            }
+        }
+
+            function renderActivityDistribution(payload) {
+                const labels = payload.labels || [];
+                const values = payload.values || [];
+                const bgColors = labels.map((label, idx) => [colors.running, colors.swimming, colors.cycling, colors.strength][idx % 4]);
+                if (!donutChart) {
+                    donutChart = new Chart(donutCtx, {
+                        type: 'doughnut',
+                        data: { labels: labels, datasets: [{ data: values, backgroundColor: bgColors }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    });
+                } else {
+                    donutChart.data.labels = labels;
+                    donutChart.data.datasets[0].data = values;
+                    donutChart.data.datasets[0].backgroundColor = bgColors;
+                    donutChart.update();
+                }
+            }
+
+            function renderCaloriesBar(payload) {
+                const labels = payload.labels || [];
+                const values = payload.values || [];
+                const barColor = '#fd7e14';
+                if (!caloriesBarChart) {
+                    caloriesBarChart = new Chart(caloriesBarCtx, {
+                        type: 'bar',
+                        data: { labels: labels, datasets: [{ label: 'Calories burned', data: values, backgroundColor: barColor }] },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                    });
+                } else {
+                    caloriesBarChart.data.labels = labels;
+                    caloriesBarChart.data.datasets[0].data = values;
+                    caloriesBarChart.update();
+                }
+            }
+
+            function renderIntensityDistribution(payload) {
+                const labels = payload.labels || [];
+                const values = payload.values || [];
+                const bgColors = labels.map((label, idx) => {
+                    const zones = ['z1', 'z2', 'z3', 'z4', 'z5'];
+                    return intensityColors[zones[idx]] || '#6c757d';
+                });
+                if (!intensityChart) {
+                    intensityChart = new Chart(intensityCtx, {
+                        type: 'polarArea',
+                        data: { labels: labels, datasets: [{ data: values, backgroundColor: bgColors }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    });
+                } else {
+                    intensityChart.data.labels = labels;
+                    intensityChart.data.datasets[0].data = values;
+                    intensityChart.data.datasets[0].backgroundColor = bgColors;
+                    intensityChart.update();
+                }
+            }
+
+            function renderPerformanceRadar(payload) {
+                const labels = payload.labels || [];
+                const values = payload.values || [];
+                if (!performanceChart) {
+                    performanceChart = new Chart(performanceCtx, {
+                        type: 'radar',
+                        data: { labels: labels, datasets: [{ label: 'Performance', data: values, borderColor: '#198754', backgroundColor: 'rgba(25,135,84,0.18)', pointBackgroundColor: '#198754' }] },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, ticks: { backdropColor: 'rgba(255,255,255,0.8)' } } } }
+                    });
+                } else {
+                    performanceChart.data.labels = labels;
+                    performanceChart.data.datasets[0].data = values;
+                    performanceChart.update();
+                }
+            }
+
+            function fetchJson(url, callback) {
+                fetch(url).then(r => r.json()).then(callback).catch(function(e){ console.error(e); });
+            }
+
+            function fetchGraph(view) {
+                let url = '/api/graphs/' + view;
+                if (view === 'month') {
+                    const now = new Date(); url += '?year=' + now.getFullYear() + '&month=' + (now.getMonth()+1);
+                } else if (view === 'year') {
+                    const now = new Date(); url += '?year=' + now.getFullYear();
+                }
+                fetchJson(url, function(payload){
+                    const data = payload.data || [];
+                    renderGraph(data);
+                });
+            }
+
+            function fetchActivityDistribution(view) {
+                const url = '/api/graphs/activity_distribution?view=' + view;
+                fetchJson(url, renderActivityDistribution);
+            }
+
+            function fetchIntensityDistribution(view) {
+                const url = '/api/graphs/intensity_distribution?view=' + view;
+                fetchJson(url, renderIntensityDistribution);
+            }
+
+            function fetchPerformance(view) {
+                const url = '/api/graphs/performance?view=' + view;
+                fetchJson(url, renderPerformanceRadar);
+            }
+
+            function fetchCaloriesBar(view) {
+                const url = '/api/graphs/calories_by_activity?view=' + view;
+                fetchJson(url, renderCaloriesBar);
+            }
+
+            const weekButton = document.querySelector('[data-graph-view="week"]');
+            if (weekButton) weekButton.classList.add('active');
+            ['activity', 'intensity', 'performance', 'calories'].forEach(function(target) {
+                const btn = document.querySelector('[data-timespan-target="' + target + '"][data-timespan="week"]');
+                if (btn) btn.classList.add('active');
+            });
+
+            if (!weekly_distance_data_array || !weekly_distance_data_array.length) {
+                fetchGraph('week');
+            } else {
+                renderGraph(weekly_distance_data_array);
+            }
+
+            fetchActivityDistribution('week');
+            fetchIntensityDistribution('week');
+            fetchPerformance('week');
+            fetchCaloriesBar('week');
+
+            document.querySelectorAll('[data-timespan-target]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const target = this.getAttribute('data-timespan-target');
+                    const view = this.getAttribute('data-timespan');
+                    document.querySelectorAll('[data-timespan-target="' + target + '"]').forEach(b=>b.classList.remove('active'));
+                    this.classList.add('active');
+                    if (target === 'activity') {
+                        fetchActivityDistribution(view);
+                    } else if (target === 'intensity') {
+                        fetchIntensityDistribution(view);
+                    } else if (target === 'performance') {
+                        fetchPerformance(view);
+                    } else if (target === 'calories') {
+                        fetchCaloriesBar(view);
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-graph-view]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const view = this.getAttribute('data-graph-view');
+                    document.querySelectorAll('[data-graph-view]').forEach(b=>b.classList.remove('active'));
+                    this.classList.add('active');
+                    fetchGraph(view);
+                });
+            });
 
     });
 

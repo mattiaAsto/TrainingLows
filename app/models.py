@@ -105,6 +105,11 @@ class Activity(db.Model):
     calories_burned = db.Column(db.Integer, nullable=True)    # Calories burned
     elevation_gain_m = db.Column(db.Float, nullable=True)     # Elevation gain in meters
     intensity = db.Column(db.String(20), nullable=False)      # "low", "moderate", "high"
+    timez1_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 1 (seconds)
+    timez2_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 2 (seconds)
+    timez3_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 3 (seconds)
+    timez4_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 4 (seconds)
+    timez5_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 5 (seconds)
     description = db.Column(db.Text, nullable=True)
     date = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Europe/Zurich")), index=True)
     
@@ -113,6 +118,14 @@ class Activity(db.Model):
         "polymorphic_on": activity_type,
         "polymorphic_identity": "activity"
     }
+
+    @classmethod
+    def get_activity_types(cls):
+        return [
+            mapper.polymorphic_identity
+            for mapper in cls.__mapper__.self_and_descendants
+            if mapper.polymorphic_identity != "activity"
+        ]
     
     def get_duration_formatted(self):
         """

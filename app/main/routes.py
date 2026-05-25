@@ -15,13 +15,24 @@ import random
 import bcrypt
 import calendar as _calendar
 
-def get_week_activities(date_start: datetime, date_stop: datetime): #returns the list .reverse() -ed
+
+ALL_ACTIVITY_TYPES = Activity.get_activity_types()
 
 
-    activities = Activity.query.filter(
-        Activity.date >= date_start,
-        Activity.date < date_stop + timedelta(days=1)
-        ).all()
+def get_week_activities(date_start: datetime, date_stop: datetime, activity_type = "all"): #returns the list .reverse() -ed
+
+    if activity_type == "all":
+        activities = Activity.query.filter(
+            Activity.date >= date_start,
+            Activity.date < date_stop + timedelta(days=1)
+            ).all()
+    
+    else:
+        activities = Activity.query.filter(
+            Activity.date >= date_start,
+            Activity.date < date_stop + timedelta(days=1),
+            Activity.activity_type == activity_type,
+            ).all()
     
     return activities
 
@@ -32,7 +43,6 @@ def create_week_stats_from_activities(activities):
     total_time_s = 0
 
     for activity in activities:
-        print()
         total_distance += round(activity.distance_km, 1) if activity.distance_km else 0
         total_elev += activity.elevation_gain_m if activity.elevation_gain_m  else 0
         total_cal += activity.calories_burned if activity.calories_burned else 0
@@ -55,12 +65,14 @@ def create_week_stats_from_activities(activities):
     return week_summary_dict
 
 
+
+
 @main.route('/test')
 def test():
 
-    
+    print(ALL_ACTIVITY_TYPES)
 
-    return jsonify()
+    return jsonify("ciao")
 
 
 
@@ -81,7 +93,6 @@ def home():
 
     week_activities = get_week_activities(start_weekday, today)
     week_activities = week_activities[::-1]
-
 
     return render_template("home.html", 
                            recent_activities = week_activities, 
@@ -104,6 +115,34 @@ def _activity_to_dict(a):
         'time': a.get_duration_formatted() if hasattr(a, 'get_duration_formatted') else None,
         'date': a.date.isoformat() if hasattr(a, 'date') else None
     }
+
+def get_current_athlete_id():
+    try:
+        if current_user.is_authenticated and current_user.is_athlete:
+            return current_user.athlete_profile.id
+    except Exception:
+        pass
+    return None
+
+
+def activity_query(start_dt, end_dt, activity_type=None):
+    q = Activity.query
+    athlete_id = get_current_athlete_id()
+    if athlete_id:
+        q = q.filter(Activity.athlete_id == athlete_id)
+    q = q.filter(Activity.date >= start_dt, Activity.date <= end_dt)
+    if activity_type:
+        q = q.filter(Activity.activity_type == activity_type)
+    return q
+
+
+def _timespan_bounds(view):
+    today = date.today()
+    if view == 'month':
+        return date(today.year, today.month, 1), today
+    if view == 'year':
+        return date(today.year, 1, 1), date(today.year, 12, 31)
+    return today - timedelta(days=6), today
 
 
 @main.route('/api/calendar/week')
@@ -156,6 +195,85 @@ def api_calendar_week():
     next_week = (monday + timedelta(days=7)).isoformat()
 
     return jsonify({'week_days': week_days, 'prev_week': prev_week, 'next_week': next_week})
+
+
+@main.route('/api/graphs/activity_distribution')
+def api_graphs_activity_distribution():
+    view = request.args.get('view', 'week').lower()
+    start_dt, end_dt = _timespan_bounds(view)
+    activities = activity_query(start_dt, end_dt).all()
+
+    totals = {tp: 0.0 for tp in ALL_ACTIVITY_TYPES if tp != 'strength'}
+    for activity in activities:
+        if activity.activity_type in totals:
+            totals[activity.activity_type] += getattr(activity, 'distance_km', 0) or 0
+
+    labels = [tp.capitalize() for tp in totals.keys()]
+    values = [round(v, 1) for v in totals.values()]
+
+    return jsonify({'view': view, 'labels': labels, 'values': values})
+
+
+@main.route('/api/graphs/intensity_distribution')
+def api_graphs_intensity_distribution():
+    view = request.args.get('view', 'week').lower()
+    start_dt, end_dt = _timespan_bounds(view)
+    activities = activity_query(start_dt, end_dt).all()
+
+    zone_times = {'z1': 0, 'z2': 0, 'z3': 0, 'z4': 0, 'z5': 0}
+    for activity in activities:
+        zone_times['z1'] += getattr(activity, 'timez1_seconds', 0) or 0
+        zone_times['z2'] += getattr(activity, 'timez2_seconds', 0) or 0
+        zone_times['z3'] += getattr(activity, 'timez3_seconds', 0) or 0
+        zone_times['z4'] += getattr(activity, 'timez4_seconds', 0) or 0
+        zone_times['z5'] += getattr(activity, 'timez5_seconds', 0) or 0
+
+    labels = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5']
+    values = [round(zone_times[z] / 3600.0, 1) for z in ['z1', 'z2', 'z3', 'z4', 'z5']]
+
+    return jsonify({'view': view, 'labels': labels, 'values': values})
+
+
+@main.route('/api/graphs/performance')
+def api_graphs_performance():
+    view = request.args.get('view', 'week').lower()
+    start_dt, end_dt = _timespan_bounds(view)
+    activities = activity_query(start_dt, end_dt).all()
+
+    metrics = {
+        'Distance (km)': 0.0,
+        'Calories': 0,
+        'Elevation (m)': 0.0,
+        'Duration (h)': 0.0,
+    }
+
+    for activity in activities:
+        metrics['Distance (km)'] += getattr(activity, 'distance_km', 0) or 0
+        metrics['Calories'] += getattr(activity, 'calories_burned', 0) or 0
+        metrics['Elevation (m)'] += getattr(activity, 'elevation_gain_m', 0) or 0
+        metrics['Duration (h)'] += (getattr(activity, 'duration_seconds', 0) or 0) / 3600.0
+
+    labels = list(metrics.keys())
+    values = [round(v, 1) for v in metrics.values()]
+
+    return jsonify({'view': view, 'labels': labels, 'values': values})
+
+
+@main.route('/api/graphs/calories_by_activity')
+def api_graphs_calories_by_activity():
+    view = request.args.get('view', 'week').lower()
+    start_dt, end_dt = _timespan_bounds(view)
+    activities = activity_query(start_dt, end_dt).all()
+
+    calories = {tp: 0 for tp in ALL_ACTIVITY_TYPES if tp != 'strength'}
+    for activity in activities:
+        if activity.activity_type in calories:
+            calories[activity.activity_type] += getattr(activity, 'calories_burned', 0) or 0
+
+    labels = [tp.capitalize() for tp in calories.keys()]
+    values = [calories[tp] for tp in calories.keys()]
+
+    return jsonify({'view': view, 'labels': labels, 'values': values})
 
 
 @main.route('/api/calendar/month')
@@ -254,27 +372,80 @@ def api_calendar_year():
 
 @main.route("/graphs")
 def graphs():
+    # Graph data is loaded asynchronously via AJAX when the page renders.
+    return render_template("graphs.html", weekly_data_array=[])
 
-    weekly_data = {
-        "labels": [],
-        "distances": [],
-    }
-    
+
+@main.route('/api/graphs/week')
+def api_graphs_week():
+    # return same structure as graphs() but as JSON
+    weekly_data_array = []
     next_sunday = date.today() + timedelta(days=6-(date.today().weekday()))
+    for activity_type in ALL_ACTIVITY_TYPES:
+        if activity_type == 'strength': continue
+        weekly_data = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
+        for i in range(9,-1,-1):
+            stop = next_sunday + timedelta(weeks=-i)
+            start = next_sunday + timedelta(weeks=-(i+1)) + timedelta(days=1)
+            week_activities = get_week_activities(start, stop, activity_type)
+            distance = float(create_week_stats_from_activities(week_activities)["total_distance"] or 0)
+            weekly_data['labels'].append(stop.strftime('%Y-%m-%d'))
+            weekly_data['distances'].append(distance)
+        weekly_data_array.append(weekly_data)
+    return jsonify({'data': weekly_data_array})
 
 
-    for i in range(9,-1,-1):
-        stop = next_sunday + timedelta(weeks=-i)
-        start = next_sunday + timedelta(weeks=-(i+1)) + timedelta(days=1)
+@main.route('/api/graphs/month')
+def api_graphs_month():
+    # params: year, month
+    try:
+        year = int(request.args.get('year', date.today().year))
+        month = int(request.args.get('month', date.today().month))
+    except Exception:
+        year = date.today().year; month = date.today().month
 
-        week_activities = get_week_activities(start, stop)
+    # days in month
+    _, ndays = _calendar.monthrange(year, month)
 
-        distance = create_week_stats_from_activities(week_activities)["total_distance"]
+    result = []
+    for activity_type in ALL_ACTIVITY_TYPES:
+        if activity_type == 'strength': continue
+        row = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
+        for d in range(1, ndays+1):
+            start_dt = datetime(year, month, d)
+            acts = get_week_activities(start_dt, start_dt, activity_type)
+            s = 0
+            for a in acts:
+                s += getattr(a, 'distance_km', 0) or 0
+            row['labels'].append(start_dt.strftime('%Y-%m-%d'))
+            row['distances'].append(round(s, 1))
+        result.append(row)
+    return jsonify({'year': year, 'month': month, 'data': result})
 
-        weekly_data["labels"].append(stop.strftime("%Y-%m-%d"))
-        weekly_data["distances"].append(distance)
-    
-    return render_template("graphs.html", weekly_data=weekly_data)
+
+@main.route('/api/graphs/year')
+def api_graphs_year():
+    try:
+        year = int(request.args.get('year', date.today().year))
+    except Exception:
+        year = date.today().year
+
+    result = []
+    for activity_type in ALL_ACTIVITY_TYPES:
+        if activity_type == 'strength': continue
+        row = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
+        for m in range(1,13):
+            start_dt = datetime(year, m, 1)
+            # naive end of month
+            end_dt = (start_dt.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+            acts = get_week_activities(start_dt, end_dt, activity_type)
+            s = 0
+            for a in acts:
+                s += getattr(a, 'distance_km', 0) or 0
+            row['labels'].append(start_dt.strftime('%b'))
+            row['distances'].append(round(s,1))
+        result.append(row)
+    return jsonify({'year': year, 'data': result})
 
 
 @main.route("/analysis")
