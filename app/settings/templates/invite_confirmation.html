@@ -1,0 +1,29 @@
+{% extends 'main_base.html' %}
+
+{% block title %}Confirm link{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h3 class="mb-3">{{ title }}</h3>
+                    <p class="text-muted mb-4">{{ message }}</p>
+
+                    <form method="post" action="{{ action_url }}">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" name="decision" value="decline" class="btn btn-outline-secondary">
+                                {{ cancel_label }}
+                            </button>
+                            <button type="submit" name="decision" value="accept" class="btn btn-primary">
+                                {{ action_label }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

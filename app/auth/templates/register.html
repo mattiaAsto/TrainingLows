@@ -175,6 +175,17 @@
             </div>
         {% endif %}
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category in ['danger', 'error'] else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         <!-- Register Form -->
         <form method="POST" action="{{ url_for('auth.register') }}" class="needs-validation">
             <!-- Basic Information -->
@@ -232,8 +243,9 @@
             </div>
 
             <!-- User Type Selection -->
-            <div class="form-section">
+            <div class="form-section" id="role-section">
                 <label class="form-label d-block">What describes you best?</label>
+                <div class="form-text mb-2">Select at least one role. You can be both an athlete and a trainer.</div>
                 <div class="form-check">
                     <input 
                         class="form-check-input user-type-check" 
@@ -255,7 +267,7 @@
                         value="on"
                     >
                     <label class="form-check-label" for="is_coach" id="coach-label">
-                        I'm a Coach
+                        I'm a Trainer
                     </label>
                 </div>
             </div>
@@ -414,6 +426,14 @@
 
         isAthleteCheckbox.addEventListener('change', updateVisibility);
         isCoachCheckbox.addEventListener('change', updateVisibility);
+
+        document.querySelector('form.needs-validation').addEventListener('submit', function (event) {
+            if (!isAthleteCheckbox.checked && !isCoachCheckbox.checked) {
+                event.preventDefault();
+                document.getElementById('role-section').classList.add('border', 'border-danger', 'rounded', 'p-2');
+                coachLabel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,61 @@
+{% extends "main_base.html" %}
+
+{% block title %}Season Planning{% endblock %}
+
+{% block body %}
+<div class="app-page-shell app-page-shell--wide season-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div><div class="text-danger text-uppercase small fw-bold season-eyebrow">Planning workspace</div><h1 class="mb-1">{{ season.name }}</h1><p class="text-muted mb-0">{{ athlete.user.first_name }} {{ athlete.user.last_name }} · objectives, phases, and weekly targets</p></div>
+        <form method="get" class="d-flex gap-2 align-items-end"><div><label class="form-label small text-muted mb-1">Season year</label><select class="form-select" name="year" onchange="this.form.submit()">{% for year in range(season_year - 2, season_year + 3) %}<option value="{{ year }}" {% if year == season_year %}selected{% endif %}>{{ year }}</option>{% endfor %}</select></div></form>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12"><div class="card shadow-sm border-0"><div class="card-body"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><div class="text-muted small">Current phase</div><h4 class="mb-1">{{ current_phase.name if current_phase else 'No active phase' }}</h4><div class="text-muted small">This week's actual training compared with the phase target</div></div>{% if current_target %}<span class="badge text-bg-light">Week of {{ current_target.week_start }}</span>{% else %}<span class="badge text-bg-warning">No weekly target</span>{% endif %}</div><div class="row g-3 mt-2"><div class="col-6 col-md-3"><div class="progress-metric"><span>Duration</span><strong>{{ actual.duration_minutes }}{% if current_target and current_target.target_duration_minutes %} / {{ current_target.target_duration_minutes }}{% endif %}</strong><small>minutes</small></div></div><div class="col-6 col-md-3"><div class="progress-metric"><span>Distance</span><strong>{{ actual.distance_km }}{% if current_target and current_target.target_distance_km %} / {{ current_target.target_distance_km }}{% endif %}</strong><small>km</small></div></div><div class="col-6 col-md-3"><div class="progress-metric"><span>Sleep</span><strong>{{ actual.sleep_hours if actual.sleep_hours is not none else '-' }}{% if current_target and current_target.target_sleep_hours %} / {{ current_target.target_sleep_hours }}{% endif %}</strong><small>hours average</small></div></div><div class="col-6 col-md-3"><div class="progress-metric"><span>Readiness</span><strong>{{ actual.readiness if actual.readiness is not none else '-' }}{% if current_target and current_target.target_readiness %} / {{ current_target.target_readiness }}{% endif %}</strong><small>average score</small></div></div></div></div></div></div>
+        <aside class="col-12 col-xl-4">
+            <div class="card shadow-sm border-0 mb-4"><div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">Objectives</h5><button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#objective-modal"><i class="fas fa-plus me-1"></i>Add</button></div>
+                {% for objective in objectives|sort(attribute='event_date') %}<div class="objective-item priority-{{ objective.priority|lower }} mb-3"><div class="d-flex justify-content-between"><strong>{{ objective.name }}</strong><span class="priority-badge">{{ objective.priority }}</span></div><div class="text-muted small mt-1">{{ objective.event_date|date_eu }} · {{ objective.sport|capitalize }}{% if objective.distance_km %} · {{ objective.distance_km }} km{% endif %}</div><div class="small mt-2">{{ objective.objective_type|replace('_', ' ')|title }} · {{ objective.status|capitalize }}</div><a class="small" href="{{ url_for('season.edit_objective', objective_id=objective.id) }}">Edit details and results</a></div>{% else %}<p class="text-muted mb-0">No objectives yet. Add a race or event to generate a season draft.</p>{% endfor %}
+            </div></div>
+            <div class="card shadow-sm border-0"><div class="card-body"><h5 class="mb-2">Phase suggestions</h5><p class="text-muted small">Generated phases are drafts. You can edit them later without losing manual changes.</p><form method="post" action="{{ url_for('season.generate_phase_draft') }}"><input type="hidden" name="season_year" value="{{ season_year }}"><button class="btn btn-outline-primary w-100" type="submit" {% if not objectives %}disabled{% endif %}>Regenerate phase draft</button></form></div></div>
+            <div class="card shadow-sm border-0 mt-4"><div class="card-body"><h5 class="mb-2">Manual phase</h5><form method="post" action="{{ url_for('season.create_phase') }}"><input type="hidden" name="season_year" value="{{ season_year }}"><div class="mb-2"><input class="form-control" name="name" placeholder="Base endurance block" required></div><div class="row g-2 mb-2"><div class="col-6"><input class="form-control" type="date" name="start_date" required></div><div class="col-6"><input class="form-control" type="date" name="end_date" required></div></div><button class="btn btn-outline-secondary w-100" type="submit">Add phase</button></form></div></div>
+        </aside>
+
+        <main class="col-12 col-xl-8"><div class="card shadow-sm border-0"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-4"><div><h5 class="mb-1">Season timeline</h5><p class="text-muted small mb-0">January through December</p></div><span class="badge text-bg-light">Live shared view</span></div><div class="season-axis"><span>Jan</span><span>Mar</span><span>Jun</span><span>Sep</span><span>Dec</span></div>{% for phase in phases %}<div class="phase-row"><div class="phase-label"><span class="phase-dot" style="background:{{ phase.color }}"></span><strong>{{ phase.name }}</strong><small>{{ phase.start_date|date_eu }} to {{ phase.end_date|date_eu }}</small></div><div class="phase-bar" style="--phase-color:{{ phase.color }}"><span>{{ phase.phase_type|replace('_', ' ')|title }}</span></div><a class="btn btn-sm btn-link" href="{{ url_for('season.edit_phase', phase_id=phase.id) }}">Edit</a></div>{% else %}<div class="empty-timeline">Add an objective, then generate a draft timeline.</div>{% endfor %}</div></div></main>
+    </div>
+</div>
+
+<div class="modal fade" id="objective-modal" tabindex="-1" aria-labelledby="objective-modal-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><form method="post" action="{{ url_for('season.create_objective') }}"><div class="modal-header"><h5 class="modal-title" id="objective-modal-title">Add objective</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><input type="hidden" name="season_year" value="{{ season_year }}"><div class="row g-3"><div class="col-md-8"><label class="form-label">Name</label><input class="form-control" name="name" required placeholder="Spring marathon"></div><div class="col-md-4"><label class="form-label">Date</label><input class="form-control" type="date" name="event_date" required></div><div class="col-md-4"><label class="form-label">Priority</label><select class="form-select" name="priority"><option>A</option><option selected>B</option><option>C</option></select></div><div class="col-md-4"><label class="form-label">Sport</label><select class="form-select" name="sport"><option>running</option><option>cycling</option><option>swimming</option><option>strength</option><option>multisport</option></select></div><div class="col-md-4"><label class="form-label">Type</label><select class="form-select" name="objective_type"><option>race</option><option>test</option><option>milestone</option><option>training_event</option><option>camp</option></select></div><div class="col-md-4"><label class="form-label">Distance (km)</label><input class="form-control" type="number" step="0.1" min="0" name="distance_km"></div><div class="col-md-4"><label class="form-label">Location</label><input class="form-control" name="location"></div><div class="col-md-4"><label class="form-label">Elevation (m)</label><input class="form-control" type="number" min="0" name="elevation_gain_m"></div><div class="col-md-4"><label class="form-label">Target time (seconds)</label><input class="form-control" type="number" min="0" name="target_time_seconds"></div><div class="col-md-4"><label class="form-label">Target pace</label><input class="form-control" type="number" step="0.01" min="0" name="target_pace"></div><div class="col-md-4"><label class="form-label">Target power</label><input class="form-control" type="number" step="0.1" min="0" name="target_power"></div><div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3"></textarea></div></div></div><div class="modal-footer"><button class="btn btn-primary" type="submit">Save objective</button></div></form></div></div></div>
+{% endblock %}
+
+{% block styles %}<style>
+    .season-page h1 { color:#27313d; font-weight:700; letter-spacing:-.03em; }
+    .season-eyebrow { letter-spacing:.14em; }
+    .objective-item { padding:1rem; border:1px solid #e9ecef; border-left:4px solid #6c757d; border-radius:8px; background:#fff; }
+    .priority-a { border-left-color:#dc3545; } .priority-b { border-left-color:#fd7e14; } .priority-c { border-left-color:#198754; }
+    .priority-badge { display:inline-grid; width:24px; height:24px; place-items:center; border-radius:50%; background:#f1f3f5; font-size:.75rem; }
+    .season-axis { display:flex; justify-content:space-between; color:#6c757d; font-size:.75rem; margin:0 0 1rem 190px; }
+    .phase-row { display:flex; min-height:58px; gap:1rem; align-items:center; border-top:1px solid #f0f1f3; }
+    .phase-label { display:flex; width:175px; flex-direction:column; flex-shrink:0; } .phase-label small { color:#6c757d; font-size:.7rem; }
+    .phase-dot { width:10px; height:10px; margin-right:.35rem; border-radius:50%; display:inline-block; }
+    .phase-bar { flex:1; min-height:32px; padding:.45rem .75rem; border-radius:6px; background:color-mix(in srgb, var(--phase-color) 18%, white); color:#27313d; border-left:5px solid var(--phase-color); font-size:.85rem; }
+    .empty-timeline { padding:3rem 1rem; text-align:center; color:#6c757d; background:#f8f9fa; border-radius:8px; }
+    .progress-metric { padding:.8rem; border:1px solid #edf0f2; border-radius:8px; background:#fafbfc; }
+    .progress-metric span, .progress-metric small { display:block; color:#6c757d; font-size:.75rem; }
+    .progress-metric strong { display:block; margin:.2rem 0; color:#27313d; font-size:1.2rem; }
+    @media(max-width:767px){ .season-axis { margin-left:0; } .phase-row { display:block; padding:1rem 0; } .phase-label { width:auto; margin-bottom:.5rem; } }
+</style>{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sportSelect = document.querySelector('select[name="sport"]');
+    const catalog = {{ activity_definitions|tojson }};
+    if (!sportSelect) return;
+    const current = sportSelect.value;
+    sportSelect.innerHTML = Object.entries(catalog).map(function ([value, definition]) {
+        return '<option value="' + value + '">' + definition.label + '</option>';
+    }).join('');
+    sportSelect.value = catalog[current] ? current : 'running';
+});
+</script>
+{% endblock %}

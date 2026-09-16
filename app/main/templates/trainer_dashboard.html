@@ -1,0 +1,39 @@
+{% extends "main_base.html" %}
+
+{% block title %}Trainer Dashboard{% endblock %}
+
+{% block body %}
+<div class="app-page-shell app-page-shell--wide trainer-dashboard">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div><div class="text-danger text-uppercase small fw-bold dashboard-eyebrow">Coaching workspace</div><h1 class="mb-1">Trainer dashboard</h1><p class="text-muted mb-0">{{ week_start|date_eu }} to {{ week_end|date_eu }} · {{ cards|length }} managed athlete{% if cards|length != 1 %}s{% endif %}</p></div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('settings.settings_home') }}"><i class="fas fa-users-gear me-1"></i>Manage roster</a>
+    </div>
+
+    {% if cards %}
+    <div class="row g-4">{% for card in cards %}<div class="col-12 col-xl-6"><article class="card athlete-card shadow-sm border-0 h-100 {% if card.needs_attention %}needs-attention{% endif %}"><div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div><div class="d-flex align-items-center gap-2"><h4 class="mb-0">{% if card.is_self %}Me{% else %}{{ card.athlete.user.first_name }} {{ card.athlete.user.last_name }}{% endif %}</h4>{% if card.is_self %}<span class="badge text-bg-light">Self</span>{% endif %}{% if card.needs_attention %}<span class="badge text-bg-warning">Needs attention</span>{% endif %}</div><div class="text-muted small mt-1">{{ card.athlete.sport or 'General athlete' }}</div></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.switch_athlete', athlete_id=card.athlete.id) }}">Manage</a></div>
+        <div class="dashboard-phase mb-3" style="--phase-color:{{ card.phase.color if card.phase else '#adb5bd' }}"><span class="small text-muted">Current phase</span><strong>{{ card.phase.name if card.phase else 'No active phase' }}</strong>{% if card.phase %}<small>{{ card.phase.start_date|date_eu }} to {{ card.phase.end_date|date_eu }}</small>{% endif %}</div>
+        <div class="row g-2 mb-3"><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Weekly TSS</span><strong>{{ card.tss }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Sessions</span><strong>{{ card.activities }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Readiness</span><strong>{{ card.readiness if card.readiness is not none else '-' }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Sleep</span><strong>{{ card.sleep if card.sleep is not none else '-' }}{% if card.sleep is not none %}h{% endif %}</strong></div></div></div>
+        <div class="d-flex justify-content-between align-items-center border-top pt-3"><div><div class="text-muted small">Next objective</div>{% if card.objective %}<strong>{{ card.objective.name }}</strong><div class="text-muted small">{{ card.objective.event_date|date_eu }} · {{ card.objective.priority }} priority</div>{% else %}<span class="text-muted">No upcoming objective</span>{% endif %}</div><div class="text-end"><div class="text-muted small">Next 7 days</div><strong>{{ card.planned|length }} planned</strong></div></div>
+        {% if card.recovery_status.alerts %}<div class="recovery-alerts mt-3">{% for alert in card.recovery_status.alerts %}<div><i class="fas fa-circle-exclamation me-1"></i>{{ alert }}</div>{% endfor %}</div>{% endif %}
+    </div></article></div>{% endfor %}</div>
+    {% else %}<div class="empty-dashboard"><i class="fas fa-users-slash"></i><h3>No athletes to manage</h3><p>Invite an athlete from Settings to start coaching.</p><a class="btn btn-primary" href="{{ url_for('settings.settings_home') }}">Open settings</a></div>{% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}<style>
+    .trainer-dashboard h1 { color:#27313d; font-weight:700; letter-spacing:-.03em; }
+    .dashboard-eyebrow { letter-spacing:.14em; }
+    .athlete-card { border-top:4px solid #198754 !important; }
+    .athlete-card.needs-attention { border-top-color:#fd7e14 !important; }
+    .dashboard-phase { display:flex; flex-direction:column; padding:.85rem 1rem; border-left:4px solid var(--phase-color); border-radius:7px; background:#f8f9fa; }
+    .dashboard-phase strong { color:#27313d; font-size:1.05rem; }
+    .dashboard-phase small { color:#6c757d; }
+    .dashboard-metric { padding:.7rem; border:1px solid #edf0f2; border-radius:7px; background:#fafbfc; }
+    .dashboard-metric span { display:block; color:#6c757d; font-size:.7rem; }
+    .dashboard-metric strong { display:block; margin-top:.2rem; color:#27313d; font-size:1.2rem; }
+    .recovery-alerts { padding:.7rem .85rem; border-radius:7px; background:#fff3cd; color:#664d03; font-size:.82rem; }
+    .recovery-alerts div + div { margin-top:.35rem; }
+    .empty-dashboard { padding:5rem 1rem; text-align:center; border:1px dashed #ced4da; border-radius:12px; background:#fff; color:#6c757d; }
+    .empty-dashboard i { margin-bottom:1rem; color:#adb5bd; font-size:2.5rem; }
+</style>{% endblock %}

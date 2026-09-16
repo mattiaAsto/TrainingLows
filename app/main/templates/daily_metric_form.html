@@ -1,0 +1,21 @@
+{% extends "main_base.html" %}
+{% block body %}
+<div class="container py-4" style="max-width:900px">
+    <div class="d-flex justify-content-between align-items-center mb-4"><div><h2 class="mb-1">Daily metrics</h2><p class="text-muted mb-0">Record recovery, readiness, and wellbeing.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('main.daily_metrics') }}">Back</a></div>
+    <form method="post" class="card shadow-sm"><div class="card-body"><div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Date</label><input class="form-control" type="date" name="metric_date" value="{{ metric.metric_date.isoformat() if metric else metric_date }}" required></div>
+        <div class="col-md-4"><label class="form-label">Sleep duration (minutes)</label><input class="form-control" type="number" min="0" name="sleep_duration_minutes" value="{{ metric.sleep_duration_minutes if metric and metric.sleep_duration_minutes is not none else '' }}"></div>
+        <div class="col-md-4"><label class="form-label">Sleep quality</label><select class="form-select" name="sleep_quality_score"><option value="">Not recorded</option>{% for score, label in quality_labels.items() %}<option value="{{ score }}" {% if metric and metric.sleep_quality_score == score %}selected{% endif %}>{{ score }} - {{ label }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label">Resting HR (bpm)</label><input class="form-control" type="number" step="0.1" min="0" name="resting_hr" value="{{ metric.resting_hr if metric and metric.resting_hr is not none else '' }}"></div>
+        <div class="col-md-4"><label class="form-label">HRV (ms)</label><input class="form-control" type="number" step="0.1" min="0" name="hrv_ms" value="{{ metric.hrv_ms if metric and metric.hrv_ms is not none else '' }}"></div>
+        <div class="col-md-4"><label class="form-label">Readiness (0-100)</label><input class="form-control" type="number" min="0" max="100" name="readiness_score" value="{{ metric.readiness_score if metric and metric.readiness_score is not none else '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Weight (kg)</label><input class="form-control" type="number" step="0.1" min="0" name="weight_kg" value="{{ metric.weight_kg if metric and metric.weight_kg is not none else '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Temperature (C)</label><input class="form-control" type="number" step="0.1" name="temperature_c" value="{{ metric.temperature_c if metric and metric.temperature_c is not none else '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Soreness (0-10)</label><input class="form-control" type="number" min="0" max="10" name="soreness_score" value="{{ metric.soreness_score if metric and metric.soreness_score is not none else '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Stress (0-10)</label><input class="form-control" type="number" min="0" max="10" name="stress_score" value="{{ metric.stress_score if metric and metric.stress_score is not none else '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Steps</label><input class="form-control" type="number" min="0" name="steps" value="{{ metric.steps if metric and metric.steps is not none else '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Calories</label><input class="form-control" type="number" min="0" name="calories" value="{{ metric.calories if metric and metric.calories is not none else '' }}"></div>
+        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3">{{ metric.notes if metric else '' }}</textarea></div>
+    </div><div class="d-flex justify-content-end mt-4"><button class="btn btn-primary" type="submit">Save daily metrics</button></div></div></form>
+</div>
+{% endblock %}

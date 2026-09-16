@@ -40,6 +40,24 @@
         #main-content {
             flex: 1;
         }
+
+        .app-page-shell {
+            width: min(1320px, calc(100% - 4rem));
+            margin-inline: auto;
+            padding-block: 1.5rem;
+        }
+
+        .app-page-shell--wide {
+            width: min(1600px, calc(100% - 4rem));
+        }
+
+        @media (max-width: 767.98px) {
+            .app-page-shell,
+            .app-page-shell--wide {
+                width: min(100% - 2.5rem, 1600px);
+                padding-block: 1rem;
+            }
+        }
         
         .navbar {
             background-color: #ffffff;
@@ -123,6 +141,21 @@
             color: #333;
             font-size: 15px;
         }
+
+        #client-error-banner {
+            position: fixed;
+            z-index: 1080;
+            top: 1rem;
+            right: 1rem;
+            width: min(420px, calc(100% - 2rem));
+            display: none;
+            padding: .9rem 1rem;
+            border: 1px solid #f1b5ba;
+            border-radius: 8px;
+            background: #fff5f5;
+            color: #842029;
+            box-shadow: 0 8px 24px rgba(20,20,20,.12);
+        }
         
         footer {
             background-color: #ffffff;
@@ -139,6 +172,13 @@
     </style>
 </head>
 <body>
+    <div id="client-error-banner" role="alert" aria-live="polite">
+        <div class="d-flex gap-2 align-items-start">
+            <i class="fas fa-triangle-exclamation mt-1"></i>
+            <div class="flex-grow-1"><strong>Something went wrong</strong><div id="client-error-message" class="small mt-1"></div></div>
+            <button type="button" class="btn-close" aria-label="Close"></button>
+        </div>
+    </div>
     <div id="main-wrapper">
         <!-- Header Navigation -->
         <nav class="navbar navbar-expand-md navbar-light bg-light justify-content-between" style="padding-left: 10px; padding-right: 10px;">
@@ -153,46 +193,106 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav mx-auto d-none d-md-flex" style="padding-left: 20px;">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('main.home')}}">Home</a>
+                            <a class="nav-link {% if request.endpoint == 'main.home' %}active1{% endif %}" href="{{url_for('main.home')}}">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('main.calendar')}}">Calendar</a>
+                            <a class="nav-link {% if request.endpoint in ['main.calendar', 'main.activity_detail'] %}active1{% endif %}" href="{{url_for('main.calendar')}}">Calendar</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('main.graphs')}}">Graphs</a>
+                            <a class="nav-link {% if request.endpoint == 'main.graphs' %}active1{% endif %}" href="{{url_for('main.graphs')}}">Graphs</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('main.analysis')}}">Analysis</a>
+                            <a class="nav-link {% if request.endpoint == 'main.analysis' %}active1{% endif %}" href="{{url_for('main.analysis')}}">Analysis</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint.startswith('season.') %}active1{% endif %}" href="{{url_for('season.season_home')}}">Planning</a>
+                        </li>
+                        {% if user.is_authenticated and user.is_trainer %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.trainer_dashboard' %}active1{% endif %}" href="{{url_for('main.trainer_dashboard')}}">Trainer dashboard</a>
+                        </li>
+                        {% endif %}
                     </ul>
                     <ul class="navbar-nav ms-auto d-none d-md-flex">
+                        {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userProfileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <strong>{{user.first_name}} {{user.last_name}}</strong>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdown">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                                <li><a class="dropdown-item" href="{{url_for('settings.settings_home')}}"><i class="fas fa-cog"></i> Settings</a></li>
+                                {% if available_athletes and available_athletes|length > 1 %}
+                                <li><h6 class="dropdown-header">Switch athlete</h6></li>
+                                {% for athlete in available_athletes %}
+                                <li>
+                                    <a class="dropdown-item {% if selected_athlete and athlete.id == selected_athlete.id %}active{% endif %}" href="{{ url_for('settings.switch_athlete', athlete_id=athlete.id) }}">
+                                        {% if athlete.id == user.id %}Me{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}{% endif %}
+                                        {% if selected_athlete and athlete.id == selected_athlete.id %}<span class="float-end"><i class="fas fa-check"></i></span>{% endif %}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a></li>
+                                <li><a class="dropdown-item" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-mug-hot"></i> Support TL</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                             </ul>
                         </li>
+                        {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('about.about_home') }}"><i class="fas fa-circle-info"></i> About</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fas fa-right-to-bracket"></i> Sign in</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+                        {% endif %}
                     </ul>
                     <!-- Mobile menu items -->
+                    {% if user.is_authenticated %}
                     <div class="d-md-none mt-3 mb-2 ps-3 mobile-user-header">
                         <p class="mb-0"><strong>{{user.first_name}} {{user.last_name}}</strong></p>
                     </div>
                     <ul class="navbar-nav d-md-none">
                         <li class="nav-item">
-                            <a class="nav-link" href="#"><i class="fas fa-cog"></i> Settings</a>
+                            <a class="nav-link" href="{{url_for('settings.settings_home')}}"><i class="fas fa-cog"></i> Settings</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint.startswith('season.') %}active1{% endif %}" href="{{url_for('season.season_home')}}">Planning</a>
+                        </li>
+                        {% if user.is_trainer %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.trainer_dashboard' %}active1{% endif %}" href="{{url_for('main.trainer_dashboard')}}">Trainer dashboard</a>
+                        </li>
+                        {% endif %}
+                        {% if available_athletes and available_athletes|length > 1 %}
+                        <li class="nav-item">
+                            <div class="nav-link text-muted small mb-1">Switch athlete</div>
+                            {% for athlete in available_athletes %}
+                            <a class="nav-link ps-3 {% if selected_athlete and athlete.id == selected_athlete.id %}active1{% endif %}" href="{{ url_for('settings.switch_athlete', athlete_id=athlete.id) }}">
+                                {% if athlete.id == user.id %}Me{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}{% endif %}
+                            </a>
+                            {% endfor %}
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
                             <a class="nav-link" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="fas fa-mug-hot"></i> Support TL</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                         </li>
                     </ul>
+                    {% else %}
+                    <ul class="navbar-nav d-md-none">
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('about.about_home') }}"><i class="fas fa-circle-info"></i> About</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fas fa-right-to-bracket"></i> Sign in</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+                    </ul>
+                    {% endif %}
                 </div>
             </div>
         </nav>
@@ -200,6 +300,18 @@
 
         <!-- Main Content Area -->
         <main id="main-content" class="flex-grow-1">
+            <div class="container-fluid px-3 pt-3">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category in ['danger', 'error'] else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show mb-2" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
             <!-- Page Content Block -->
             {% block body %}
 
@@ -225,19 +337,19 @@
 
     <nav class="navbar fixed-bottom bg-light d-md-none border-top">
         <div class="container-fluid justify-content-around">
-            <a class="nav-link text-center" href="{{url_for('main.home')}}">
+            <a class="nav-link text-center {% if request.endpoint == 'main.home' %}active1{% endif %}" href="{{url_for('main.home')}}">
                 <i class="fas fa-house"></i>
                 <div style="font-size: 12px;">Home</div>
             </a>
-            <a class="nav-link text-center" href="{{url_for('main.calendar')}}">
+            <a class="nav-link text-center {% if request.endpoint in ['main.calendar', 'main.activity_detail'] %}active1{% endif %}" href="{{url_for('main.calendar')}}">
                 <i class="fas fa-calendar"></i>
                 <div style="font-size: 12px;">Calendar</div>
             </a>
-            <a class="nav-link text-center" href="{{url_for('main.graphs')}}">
+            <a class="nav-link text-center {% if request.endpoint == 'main.graphs' %}active1{% endif %}" href="{{url_for('main.graphs')}}">
                 <i class="fas fa-arrow-trend-up"></i>
                 <div style="font-size: 12px;">Graphs</div>
             </a>
-            <a class="nav-link text-center" href="{{url_for('main.analysis')}}">
+            <a class="nav-link text-center {% if request.endpoint == 'main.analysis' %}active1{% endif %}" href="{{url_for('main.analysis')}}">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <div style="font-size: 12px;">Analysis</div>
             </a>
@@ -249,6 +361,26 @@
      crossorigin="anonymous"></script>
     
     <script>
+        window.showClientError = function (message) {
+            const banner = document.getElementById('client-error-banner');
+            const detail = document.getElementById('client-error-message');
+            if (!banner || !detail) return;
+            detail.textContent = message || 'Please try again. If the problem continues, reload the page.';
+            banner.style.display = 'block';
+        };
+
+        document.querySelector('#client-error-banner .btn-close')?.addEventListener('click', function () {
+            document.getElementById('client-error-banner').style.display = 'none';
+        });
+
+        window.addEventListener('unhandledrejection', function (event) {
+            window.showClientError(event.reason && event.reason.message ? event.reason.message : 'A background request failed.');
+        });
+
+        window.addEventListener('error', function () {
+            window.showClientError('The page encountered a browser error. Please reload and try again.');
+        });
+
         const navbarCollapse = document.getElementById('navbarNav');
         const toggleIcon = document.getElementById('navToggleIcon');
         

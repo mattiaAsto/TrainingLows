@@ -1,7 +1,7 @@
 {% extends "main_base.html" %}
 
 {% block body %}
-<div class="container mt-4">
+<div class="app-page-shell">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0" style="color:#333; font-weight:600;">Graphs & Trends</h2>
         <small class="text-muted">Visualize weekly and monthly trends</small>
@@ -46,6 +46,34 @@
                     <div class="chart-container" style="height:260px;">
                         <canvas id="activityDonutChart"></canvas>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">Sleep & readiness</h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="daily metrics view">
+                            <button type="button" class="btn btn-outline-secondary active" data-metrics-view="week">Week</button>
+                            <button type="button" class="btn btn-outline-secondary" data-metrics-view="month">Month</button>
+                            <button type="button" class="btn btn-outline-secondary" data-metrics-view="year">Year</button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height:260px;"><canvas id="dailySleepChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">Resting HR & HRV</h5>
+                        <span class="text-muted small">daily records</span>
+                    </div>
+                    <div class="chart-container" style="height:260px;"><canvas id="dailyVitalsChart"></canvas></div>
                 </div>
             </div>
         </div>
@@ -102,12 +130,6 @@
     <!--Graphs-->  
 
     <script>
-    // Logic to hightlight navbar link
-    const links = document.getElementsByClassName('nav-link');
-    const current = links[2];
-    current.classList.add('active1');
-
-
     // Placeholder: real data should be provided by the view via Jinja
     document.addEventListener('DOMContentLoaded', function(){
         // If Chart.js is loaded by the base template, these canvases can be initialized here.
@@ -126,12 +148,8 @@
 
         const weekly_distance_data_array = {{weekly_data_array|tojson}};
 
-        const colors = {
-            running: '#dc3545',
-            swimming: '#0d6efd',
-            cycling: '#198754',
-            strength: '#fd7e14'
-        };
+        const colors = {{ activity_colors|tojson }};
+        const activityLabels = {{ activity_labels|tojson }};
 
         const intensityColors = {
             z1: '#0dadfd',
@@ -153,6 +171,8 @@
         let caloriesBarChart = null;
         let intensityChart = null;
         let performanceChart = null;
+        let dailySleepChart = null;
+        let dailyVitalsChart = null;
 
         function renderGraph(dataArray) {
             const labelsLocal = (dataArray.find(a => a.labels && a.labels.length) || {}).labels || [];
@@ -161,7 +181,7 @@
                 const border = colors[atype] ?? '#6c757d';
                 const bg = (colors[atype] ?? '#6c757d') + '1a';
                 return {
-                    label: (atype.charAt(0).toUpperCase() + atype.slice(1)),
+                    label: activityLabels[atype] || (atype.charAt(0).toUpperCase() + atype.slice(1)),
                     data: (a.distances || []).map(Number),
                     borderColor: border,
                     backgroundColor: bg,
@@ -201,7 +221,7 @@
             function renderActivityDistribution(payload) {
                 const labels = payload.labels || [];
                 const values = payload.values || [];
-                const bgColors = labels.map((label, idx) => [colors.running, colors.swimming, colors.cycling, colors.strength][idx % 4]);
+                const bgColors = labels.map((label, idx) => colors[Object.keys(colors)[idx]] || '#6c757d');
                 if (!donutChart) {
                     donutChart = new Chart(donutCtx, {
                         type: 'doughnut',
@@ -270,6 +290,29 @@
                 }
             }
 
+            function renderDailyMetrics(payload) {
+                const labels = payload.labels || [];
+                if (dailySleepChart) dailySleepChart.destroy();
+                dailySleepChart = new Chart(document.getElementById('dailySleepChart').getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: [
+                        { label: 'Sleep (hours)', data: payload.sleep_hours || [], borderColor: '#6f42c1', backgroundColor: 'rgba(111,66,193,.12)', tension: .25, yAxisID: 'sleep' },
+                        { label: 'Readiness', data: payload.readiness || [], borderColor: '#198754', backgroundColor: '#198754', tension: .25, yAxisID: 'score' },
+                        { label: 'Sleep quality', data: payload.sleep_quality || [], borderColor: '#fd7e14', backgroundColor: '#fd7e14', borderDash: [4, 3], tension: .25, yAxisID: 'score' }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false, scales: { sleep: { beginAtZero: true, position: 'left' }, score: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false } } } }
+                });
+                if (dailyVitalsChart) dailyVitalsChart.destroy();
+                dailyVitalsChart = new Chart(document.getElementById('dailyVitalsChart').getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: [
+                        { label: 'Resting HR', data: payload.resting_hr || [], borderColor: '#dc3545', backgroundColor: '#dc3545', tension: .25, yAxisID: 'hr' },
+                        { label: 'HRV (ms)', data: payload.hrv_ms || [], borderColor: '#0d6efd', backgroundColor: '#0d6efd', tension: .25, yAxisID: 'hrv' }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false, scales: { hr: { beginAtZero: false, position: 'left' }, hrv: { beginAtZero: false, position: 'right', grid: { drawOnChartArea: false } } } }
+                });
+            }
+
             function fetchJson(url, callback) {
                 fetch(url).then(r => r.json()).then(callback).catch(function(e){ console.error(e); });
             }
@@ -307,6 +350,10 @@
                 fetchJson(url, renderCaloriesBar);
             }
 
+            function fetchDailyMetrics(view) {
+                fetchJson('/api/graphs/daily_metrics?view=' + view, renderDailyMetrics);
+            }
+
             const weekButton = document.querySelector('[data-graph-view="week"]');
             if (weekButton) weekButton.classList.add('active');
             ['activity', 'intensity', 'performance', 'calories'].forEach(function(target) {
@@ -324,6 +371,7 @@
             fetchIntensityDistribution('week');
             fetchPerformance('week');
             fetchCaloriesBar('week');
+            fetchDailyMetrics('week');
 
             document.querySelectorAll('[data-timespan-target]').forEach(function(btn){
                 btn.addEventListener('click', function(){
@@ -340,6 +388,15 @@
                     } else if (target === 'calories') {
                         fetchCaloriesBar(view);
                     }
+                });
+            });
+
+            document.querySelectorAll('[data-metrics-view]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const view = this.getAttribute('data-metrics-view');
+                    document.querySelectorAll('[data-metrics-view]').forEach(function(item){ item.classList.remove('active'); });
+                    this.classList.add('active');
+                    fetchDailyMetrics(view);
                 });
             });
 

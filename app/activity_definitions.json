@@ -1,0 +1,93 @@
+{
+    "running": {
+        "label": "Running",
+        "color": "#dc3545",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Running"
+    },
+    "cycling": {
+        "label": "Cycling",
+        "color": "#198754",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Cycling"
+    },
+    "swimming": {
+        "label": "Swimming",
+        "color": "#0d6efd",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Swimming"
+    },
+    "strength": {
+        "label": "Strength",
+        "color": "#fd7e14",
+        "unit": "min",
+        "category": "strength",
+        "model": "Strenght"
+    },
+    "walking": {
+        "label": "Walking",
+        "color": "#6c757d",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Walking"
+    },
+    "hiking": {
+        "label": "Hiking",
+        "color": "#8a6d3b",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Hiking"
+    },
+    "rowing": {
+        "label": "Rowing",
+        "color": "#20c997",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Rowing"
+    },
+    "yoga": {
+        "label": "Yoga",
+        "color": "#6f42c1",
+        "unit": "min",
+        "category": "mobility",
+        "model": "Yoga"
+    },
+    "multisport": {
+        "label": "Multisport",
+        "color": "#343a40",
+        "unit": "km",
+        "category": "multisport",
+        "model": "Multisport"
+    },
+    "skiing": {
+        "label": "Skiing",
+        "color": "#17a2b8",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Skiing"
+    },
+    "stretching": {
+        "label": "Stretching",
+        "color": "#e83e8c",
+        "unit": "min",
+        "category": "mobility",
+        "model": "Stretching"
+    },
+    "climbing": {
+        "label": "Climbing",
+        "color": "#795548",
+        "unit": "min",
+        "category": "strength",
+        "model": "Climbing"
+    },
+    "skitouring": {
+        "label": "Skitouring",
+        "color": "#f5f542",
+        "unit": "km",
+        "category": "endurance",
+        "model": "Skitouring"
+    }
+}

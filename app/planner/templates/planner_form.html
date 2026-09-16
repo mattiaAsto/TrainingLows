@@ -1,0 +1,188 @@
+{% extends "main_base.html" %}
+
+{% block styles %}
+<style>
+    .planner-form-shell {
+        max-width: 860px;
+        margin: 0 auto;
+    }
+
+    .planner-card {
+        border-radius: 18px;
+        border: 1px solid rgba(220, 53, 69, 0.12);
+        background: linear-gradient(180deg, #ffffff 0%, #fffaf9 100%);
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.04);
+    }
+
+    .planner-header {
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        margin-bottom: 1.5rem;
+    }
+
+    .planner-title {
+        color: #1f2937;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .planner-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+    }
+
+    .planner-form .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.45rem;
+    }
+
+    .planner-form .form-control,
+    .planner-form .form-select {
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background-color: #fff;
+        padding: 0.7rem 0.9rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .planner-form .form-control:focus,
+    .planner-form .form-select:focus {
+        border-color: rgba(220, 53, 69, 0.45);
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.09);
+    }
+
+    .planner-form textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .planner-actions {
+        padding-top: 1rem;
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
+        margin-top: 1.5rem;
+    }
+
+    .planner-actions .btn {
+        border-radius: 10px;
+        padding: 0.72rem 1.1rem;
+        font-weight: 600;
+    }
+
+    .planner-actions .btn-primary {
+        background: linear-gradient(135deg, #dc3545, #e25a69);
+        border: none;
+    }
+
+    .planner-actions .btn-primary:hover {
+        background: linear-gradient(135deg, #c82333, #d14a5e);
+    }
+
+    .planner-actions .btn-outline-danger {
+        border-width: 1.5px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container py-4 planner-form-shell">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card planner-card border-0">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center planner-header">
+                        <div>
+                            <h2 class="planner-title mb-1">{{ 'Edit' if is_edit else 'Add' }} calendar entry</h2>
+                            <p class="planner-subtitle mb-0">Create a planned session or a completed workout.</p>
+                        </div>
+                        <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-secondary">Back</a>
+                    </div>
+
+                    <form method="post" class="planner-form">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Entry type</label>
+                                <select class="form-select" name="entry_type" required>
+                                    <option value="planned" {% if (entry_type|default('planned')) == 'planned' %}selected{% endif %}>Planned</option>
+                                    <option value="done" {% if (entry_type|default('planned')) == 'done' %}selected{% endif %}>Done</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Activity type</label>
+                                <select class="form-select" name="activity_type" required>
+                                    {% for activity_type, definition in activity_definitions.items() %}
+                                    <option value="{{ activity_type }}" {% if (entry.activity_type|default('running')) == activity_type %}selected{% endif %}>{{ definition.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Title</label>
+                                <input class="form-control" type="text" name="title" value="{{ entry.title if is_edit else '' }}" placeholder="Easy run, threshold ride...">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Intensity</label>
+                                <select class="form-select" name="intensity">
+                                    <option value="low" {% if (entry.intensity|default('moderate')) == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="moderate" {% if (entry.intensity|default('moderate')) == 'moderate' %}selected{% endif %}>Moderate</option>
+                                    <option value="high" {% if (entry.intensity|default('moderate')) == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Date</label>
+                                <input class="form-control" type="date" name="date" value="{{ (entry.planned_date|default(entry.date)|string)[:10] if is_edit else default_date }}" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Time</label>
+                                <input class="form-control" type="time" name="time" value="08:00" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Duration (minutes)</label>
+                                <input class="form-control" type="number" name="duration_minutes" min="0" value="{{ ((entry.duration_seconds|default(0)) / 60)|int if is_edit else 60 }}" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Distance (km)</label>
+                                <input class="form-control" type="number" step="0.1" min="0" name="distance_km" value="{{ entry.distance_km if is_edit and entry.distance_km is not none else 0 }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Calories</label>
+                                <input class="form-control" type="number" min="0" name="calories" value="0">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Elevation (m)</label>
+                                <input class="form-control" type="number" min="0" name="elevation_gain_m" value="0">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" rows="3" placeholder="Extra notes, focus, or goals...">{{ entry.description if is_edit else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 planner-actions">
+                            {% if is_edit %}
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                            <button type="button" class="btn btn-outline-danger" onclick="document.getElementById('delete-form').submit();">Delete</button>
+                            {% else %}
+                            <button type="submit" class="btn btn-primary">Save entry</button>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    {% if is_edit %}
+                    <form id="delete-form" method="post" action="{{ url_for('planner.delete_entry', entry_type=entry_type, entry_id=entry.id) }}" style="display:none;"></form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

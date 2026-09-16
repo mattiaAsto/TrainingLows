@@ -5,6 +5,7 @@ import os
 import logging
 import json
 from app.models import *
+from app.activity_catalog import ACTIVITY_DEFINITIONS, ACTIVITY_TYPES, activity_label
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import MetaData
 from zoneinfo import ZoneInfo
@@ -63,7 +64,7 @@ with app.app_context():
     try:
         existing = Activity.query.filter_by(athlete_id=admin.id).first()
         if not existing:
-            now = datetime.now()
+            now = datetime.now() # + timedelta(days=10)
 
             running_titles = ["Morning Run", "Evening Run", "Trail Run", "Long Run", "Recovery Run"]
             swimming_titles = ["Pool Session", "Open Water Swim", "Interval Swim", "Easy Swim"]
@@ -76,7 +77,7 @@ with app.app_context():
                                             hours=random.randint(0, 23),
                                             minutes=random.randint(0, 59))
 
-                activity_type = random.choice(["running", "swimming", "cycling", "strength"])
+                activity_type = random.choice(list(ACTIVITY_TYPES))
                 duration = random.randint(1800, 7200) if activity_type != "cycling" else random.randint(3600, 14400)
                 
                 # Distribute duration across 5 zones randomly
@@ -150,7 +151,7 @@ with app.app_context():
                         terrain=random.choice(['road', 'trail', 'mixed'])
                     )
 
-                else:  # strength
+                elif activity_type == "strength":
                     activity = Strenght(
                         athlete_id=admin.id,
                         title=random.choice(strength_titles),
@@ -169,10 +170,77 @@ with app.app_context():
                         strenght_type=random.choice(['maximal', 'resistance', 'power'])
                     )
 
+                else:
+                    model_cls = get_activity_model(activity_type)
+                    activity = model_cls(
+                        athlete_id=admin.id,
+                        title=f"{activity_label(activity_type)} Session",
+                        duration_seconds=duration,
+                        distance_km=round(random.uniform(2.0, 40.0), 1) if ACTIVITY_DEFINITIONS[activity_type]['unit'] == 'km' else None,
+                        calories_burned=random.randint(100, 800),
+                        elevation_gain_m=round(random.uniform(0, 800), 1),
+                        intensity=random.choice(['low', 'moderate', 'high']),
+                        timez1_seconds=timez1,
+                        timez2_seconds=timez2,
+                        timez3_seconds=timez3,
+                        timez4_seconds=timez4,
+                        timez5_seconds=timez5,
+                        description=f'Auto-generated {activity_label(activity_type).lower()} activity',
+                        date=random_date,
+                    )
+
                 db.session.add(activity)
 
             db.session.commit()
             print(f"100 random activities created for athlete {admin.id}")
+
+            planned_templates = [
+                ("Tempo Run", "running", 3, 12.0, "moderate", "Planned workout for debug"),
+                ("Hill Repeats", "running", 4, 10.5, "high", "Strength workout for debug"),
+                ("Recovery Ride", "cycling", 2, 32.0, "low", "Easy spin"),
+                ("Threshold Ride", "cycling", 3, 48.0, "high", "Planned debug ride"),
+                ("Pool Intervals", "swimming", 1, 2.2, "moderate", "Technique set"),
+                ("Open Water", "swimming", 2, 3.5, "moderate", "Long distance swim"),
+                ("Upper Body Strength", "strength", 1, 0, "moderate", "Upper body plan"),
+                ("Lower Body Strength", "strength", 1, 0, "high", "Leg strength plan"),
+                ("Easy Run", "running", 2, 8.0, "low", "Recovery run"),
+                ("Long Ride", "cycling", 4, 80.0, "moderate", "Long endurance ride"),
+            ]
+
+            for index, (title, activity_type, hours, distance_km, intensity, description) in enumerate(planned_templates):
+                planned = PlannedActivity(
+                    athlete_id=admin.id,
+                    title=title,
+                    activity_type=activity_type,
+                    planned_date=now + timedelta(days=index + 1, hours=8 + (index % 3) * 2),
+                    duration_seconds=hours * 3600,
+                    distance_km=distance_km if activity_type != 'strength' else 0,
+                    intensity=intensity,
+                    description=description,
+                )
+                db.session.add(planned)
+
+            for index in range(10):
+                activity_type = random.choice(["running", "cycling", "swimming", "strength"])
+                title = {
+                    "running": "Debug Run",
+                    "cycling": "Debug Ride",
+                    "swimming": "Debug Swim",
+                    "strength": "Debug Strength",
+                }[activity_type]
+                db.session.add(PlannedActivity(
+                    athlete_id=admin.id,
+                    title=f"{title} {index + 1}",
+                    activity_type=activity_type,
+                    planned_date=now + timedelta(days=7 + index, hours=18),
+                    duration_seconds=random.randint(1800, 5400),
+                    distance_km=round(random.uniform(4.0, 45.0), 1) if activity_type != 'strength' else 0,
+                    intensity=random.choice(['low', 'moderate', 'high']),
+                    description='Auto-generated planned debug activity',
+                ))
+
+            db.session.commit()
+            print("20 planned debug activities created")
 
     except Exception as e:
         db.session.rollback()
@@ -186,11 +254,10 @@ port = int(os.getenv("PORT", 5500))
 if __name__ == '__main__':
     print("Refreshed...")
 
-    
     if system == 1:
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
-        app.run(host=host, port=port, debug=True)
+        app.run(host=host, port=port, debug=False, use_reloader=False)
     else:
         server = Server(app)
         # Aggiungi qui i file o directory che vuoi monitorare

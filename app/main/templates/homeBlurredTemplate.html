@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrainingLows - Training with context</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --accent: #dc3545; --ink: #27313d; --muted: #6c757d; }
+        body { min-height: 100vh; margin: 0; background: #f5f6f8; color: var(--ink); }
+        .public-nav { background: #fff; border-bottom: 1px solid #e8eaed; }
+        .preview-shell { max-width: 1180px; margin: 0 auto; padding: 3.5rem 1rem 4rem; }
+        .preview-heading { max-width: 700px; }
+        .preview-heading h1 { font-size: clamp(2.3rem, 6vw, 4.5rem); font-weight: 750; letter-spacing: -.04em; }
+        .preview-heading p { color: var(--muted); font-size: 1.1rem; line-height: 1.7; }
+        .preview-cta { background: var(--ink); color: #fff; border: 0; }
+        .preview-cta:hover { background: var(--accent); color: #fff; }
+        .preview-board { position: relative; margin-top: 3rem; padding: 1.25rem; border: 1px solid #e1e4e8; border-radius: 14px; background: #fff; box-shadow: 0 18px 45px rgba(30,40,50,.1); }
+        .preview-board::after { content: 'Sign in to open your dashboard'; position: absolute; inset: 0; display: grid; place-items: center; border-radius: 14px; background: rgba(255,255,255,.5); color: var(--ink); font-size: 1.15rem; font-weight: 650; backdrop-filter: blur(3px); }
+        .preview-blur { filter: blur(3px); user-select: none; pointer-events: none; }
+        .preview-card { min-height: 120px; padding: 1rem; border: 1px solid #edf0f2; border-radius: 10px; background: #fff; }
+        .preview-value { margin-top: .35rem; font-size: 1.65rem; font-weight: 700; }
+        .preview-bar { height: 9px; margin-top: 1rem; border-radius: 9px; background: #edf0f2; overflow: hidden; }
+        .preview-bar span { display: block; height: 100%; border-radius: inherit; }
+        .bar-red { width: 72%; background: #dc3545; } .bar-green { width: 58%; background: #198754; }
+        .bar-blue { width: 81%; background: #0d6efd; } .bar-orange { width: 44%; background: #fd7e14; }
+        .preview-note { margin-top: 1rem; color: var(--muted); font-size: .9rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar public-nav px-3 py-2">
+        <div class="container-fluid"><a class="navbar-brand fw-semibold" href="/"><i class="fas fa-person-running text-danger me-2"></i>TrainingLows</a><div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="/about/">About</a><a class="btn preview-cta btn-sm" href="/auth/login">Sign in</a><a class="btn btn-outline-danger btn-sm" href="/auth/register">Register</a></div></div>
+    </nav>
+    <main class="preview-shell">
+        <section class="preview-heading"><div class="text-danger text-uppercase fw-bold small mb-2" style="letter-spacing:.14em;">A clearer training picture</div><h1>Train hard. Recover intelligently.</h1><p>TrainingLows brings your activities, plans, recovery signals, and performance trends into one focused workspace.</p><a class="btn preview-cta px-4 py-2" href="/auth/register">Create your account <i class="fas fa-arrow-right ms-2"></i></a></section>
+        <section class="preview-board" aria-label="Dashboard preview"><div class="preview-blur"><div class="row g-3"><div class="col-6 col-lg-3"><div class="preview-card"><div class="text-muted small">Total distance</div><div class="preview-value">86.4 km</div><div class="text-success small">+12% this week</div></div></div><div class="col-6 col-lg-3"><div class="preview-card"><div class="text-muted small">Training time</div><div class="preview-value">7h 42m</div><div class="text-muted small">6 sessions</div></div></div><div class="col-6 col-lg-3"><div class="preview-card"><div class="text-muted small">Readiness</div><div class="preview-value">82 / 100</div><div class="text-muted small">Good recovery</div></div></div><div class="col-6 col-lg-3"><div class="preview-card"><div class="text-muted small">Form</div><div class="preview-value">+8.4</div><div class="text-success small">Ready to train</div></div></div><div class="col-12 col-lg-8"><div class="preview-card"><div class="d-flex justify-content-between"><strong>Weekly breakdown</strong><span class="text-muted small">Current week</span></div><div class="mt-3 small">Running</div><div class="preview-bar"><span class="bar-red"></span></div><div class="mt-3 small">Cycling</div><div class="preview-bar"><span class="bar-green"></span></div><div class="mt-3 small">Swimming</div><div class="preview-bar"><span class="bar-blue"></span></div><div class="mt-3 small">Strength</div><div class="preview-bar"><span class="bar-orange"></span></div></div></div><div class="col-12 col-lg-4"><div class="preview-card"><strong>Recent activities</strong><div class="d-flex justify-content-between mt-4"><span>Morning Run</span><b>12.4 km</b></div><div class="d-flex justify-content-between mt-3"><span>Recovery Ride</span><b>28.1 km</b></div><div class="d-flex justify-content-between mt-3"><span>Pool Session</span><b>2.4 km</b></div></div></div></div></div></section>
+        <p class="preview-note"><i class="fas fa-lock me-1"></i>This is a fixed preview. Your personal training data is available after sign in.</p>
+    </main>
+</body>
+</html>

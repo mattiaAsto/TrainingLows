@@ -1,0 +1,304 @@
+{% extends 'main_base.html' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Settings</h1>
+            <p class="text-muted mb-0">Manage your athlete roster, calendars, and training plans.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Current profile</h5>
+                    <div class="mb-3">
+                        <div class="text-muted small">User</div>
+                        <div class="fw-semibold">{{ user.first_name }} {{ user.last_name }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-muted small">Role</div>
+                        <div>
+                            {% if user.is_trainer or user.is_coach %}<span class="badge bg-primary">Trainer</span>{% endif %}
+                            {% if user.is_athlete %}<span class="badge bg-success">Athlete</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if athlete and user.is_trainer %}
+                    <div class="mb-3">
+                        <div class="text-muted small">Selected athlete</div>
+                        <div class="fw-semibold">{% if athlete.id == user.id %}Me{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}{% endif %}</div>
+                    </div>
+                    {% elif athlete and user.is_athlete and not user.is_trainer %}
+                    <div class="mb-3">
+                        <div class="text-muted small">Your profile</div>
+                        <div class="fw-semibold">{{ athlete.user.first_name }} {{ athlete.user.last_name }}</div>
+                    </div>
+                    {% endif %}
+                    <a href="{{ url_for('strava.settings') }}" class="btn btn-outline-secondary w-100 mb-2">Manage Strava</a>
+
+                    {% if user.is_athlete %}
+                    <form method="post" action="{{ url_for('settings.invite_trainer') }}" class="row g-2 mt-3">
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Link your trainer</label>
+                            <input type="email" name="trainer_email" class="form-control" placeholder="trainer@example.com" required>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-outline-primary w-100" type="submit">Generate trainer link</button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    {% if user.is_trainer %}
+                    <form method="post" action="{{ url_for('settings.invite_athlete') }}" class="row g-2 mt-3">
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Link an athlete</label>
+                            <input type="email" name="athlete_email" class="form-control" placeholder="athlete@example.com" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Athlete birthdate</label>
+                            <input type="date" name="date_of_birth" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-outline-success w-100" type="submit">Generate athlete link</button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    {% if pending_invites %}
+                    <div class="mt-4 pt-3 border-top">
+                        <h5 class="card-title mb-3">Pending invites</h5>
+                        <div class="list-group small">
+                            {% for invite in pending_invites %}
+                            <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ invite.kind|replace('_', ' ')|title }}</div>
+                                    <div class="text-muted">From: {{ invite.from_user.first_name }} {{ invite.from_user.last_name }}</div>
+                                </div>
+                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.confirm_' + ('trainer' if invite.kind == 'trainer_link' else 'athlete') + '_link', token=invite.token) }}">Review</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if pending_strava_activities %}
+                    <div class="mt-4 pt-3 border-top">
+                        <h5 class="card-title mb-2">Pending Strava activities</h5>
+                        <p class="text-muted small">Review these before importing them into your completed activities.</p>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('strava.settings') }}">Open Strava review</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if user.is_trainer %}
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Athlete roster</h5>
+                    </div>
+
+                    {% if roster %}
+                    <div class="list-group">
+                        {% for item in roster %}
+                        <a href="{{ url_for('settings.switch_athlete', athlete_id=item.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if athlete and item.id == athlete.id %}active{% endif %}">
+                            <div>
+                                <div class="fw-semibold">{% if item.id == user.id %}Me{% else %}{{ item.user.first_name }} {{ item.user.last_name }}{% endif %}</div>
+                                <small>{{ item.sport or 'General athlete' }}</small>
+                            </div>
+                            <span class="badge bg-light text-dark">Select</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light border mb-0">No athletes linked yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if athlete %}
+    <div class="row g-4 mt-1">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">{% if athlete.id == user.id %}My{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}'s{% endif %} overview</h5>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.athlete_calendar', athlete_id=athlete.id) }}">Browse calendar</a>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">Total distance</div>
+                                <div class="fw-bold fs-4">{{ stats.total_distance|default(0) }} km</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">Sessions</div>
+                                <div class="fw-bold fs-4">{{ stats.total_sessions|default(0) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">Minutes</div>
+                                <div class="fw-bold fs-4">{{ stats.total_minutes|default(0) }} min</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="mb-2">Recent activities</h6>
+                        {% if recent_activities %}
+                        <div class="list-group small">
+                            {% for item in recent_activities %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ item.title }}</div>
+                                    <div class="text-muted">{{ item.date|date_eu }} · {{ item.activity_type|capitalize }}</div>
+                                </div>
+                                <div class="text-end">
+                                    <div>{{ (item.distance_km or 0) }} km</div>
+                                    <small class="text-muted">{{ (item.duration_seconds or 0) // 60 }} min</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-light border mb-0">No recent activities yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Planned sessions</h5>
+                        <a class="btn btn-sm btn-success" href="{{ url_for('settings.create_plan', athlete_id=athlete.id) }}">Add plan</a>
+                    </div>
+
+                    {% if planned_activities %}
+                    <div class="list-group small">
+                        {% for item in planned_activities %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-semibold">{{ item.title }}</div>
+                                    <div class="text-muted">{{ item.activity_type|capitalize }} · {{ item.planned_date|date_eu(true) }}</div>
+                                </div>
+                                <form method="post" action="{{ url_for('settings.delete_plan', athlete_id=athlete.id, plan_id=item.id) }}">
+                                    <button class="btn btn-link btn-sm text-danger p-0" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light border mb-0">No planned sessions yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if calendar_view %}
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Calendar for {% if athlete.id == user.id %}me{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}{% endif %}</h5>
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.create_plan', athlete_id=athlete.id) }}">Create plan</a>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-7 g-2">
+                {% for date_value in week_dates %}
+                <div class="col">
+                    <div class="border rounded p-2 h-100">
+                        <div class="fw-semibold small text-muted mb-2">{{ date_value.strftime('%a') }}</div>
+                        <div class="fw-bold mb-2">{{ date_value.day }}</div>
+                        {% set items = sessions_by_day.get(date_value.isoformat(), []) %}
+                        {% if items %}
+                        {% for item in items %}
+                        <div class="p-2 mb-1 rounded {% if item.__class__.__name__ == 'PlannedActivity' %}bg-secondary-subtle{% else %}bg-primary-subtle{% endif %}">
+                            <div class="fw-semibold small">{{ item.title }}</div>
+                            <div class="small text-muted">{{ item.activity_type|capitalize }}</div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="small text-muted">Rest</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if plan_form %}
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Create plan for {% if athlete.id == user.id %}me{% else %}{{ athlete.user.first_name }} {{ athlete.user.last_name }}{% endif %}</h5>
+            <form method="post" action="{{ url_for('settings.create_plan', athlete_id=athlete.id) }}" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-control" name="title" placeholder="Tempo ride">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" name="activity_type">
+                        <option value="running">Running</option>
+                        <option value="cycling">Cycling</option>
+                        <option value="swimming">Swimming</option>
+                        <option value="strength">Strength</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" name="planned_date" value="{{ today.isoformat() if today is defined else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Time</label>
+                    <input type="time" class="form-control" name="time" value="08:00">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Duration</label>
+                    <input type="number" class="form-control" name="duration_minutes" min="0" value="45">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Distance</label>
+                    <input type="number" step="0.1" class="form-control" name="distance_km" min="0" value="0">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Intensity</label>
+                    <select class="form-select" name="intensity">
+                        <option value="low">Low</option>
+                        <option value="moderate" selected>Moderate</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" name="description" rows="3" placeholder="Optional details"></textarea>
+                </div>
+                <div class="col-12 text-end">
+                    <button class="btn btn-primary" type="submit">Save plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

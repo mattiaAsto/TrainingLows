@@ -1,13 +1,19 @@
-{% extends "main_base.html" %}
+{# Legacy analysis template retained only as a compatibility placeholder. #}
+{% extends "analysis_dashboard.html" %}
 
-{% block body %}
+{# {% block body %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h2 class="mb-0" style="color:#333; font-weight:600;">Performance Analysis</h2>
-            <div class="text-muted small">Alternative layout with deeper insights</div>
+                    <h2 class="mb-1">Performance Analysis</h2>
+                    <p class="text-muted mb-0" id="analysis-range-label">Loading performance data...</p>
         </div>
-        <div>
+                <div class="btn-group" role="group" aria-label="Analysis time range">
+                    <button type="button" class="btn btn-outline-secondary analysis-range active" data-days="30">30 days</button>
+                    <button type="button" class="btn btn-outline-secondary analysis-range" data-days="90">90 days</button>
+                    <button type="button" class="btn btn-outline-secondary analysis-range" data-days="365">1 year</button>
+                </div>
             <a class="btn btn-outline-secondary btn-sm" href="#">Export CSV</a>
         </div>
     </div>
@@ -71,6 +77,109 @@
                         <li class="text-muted">No achievements yet.</li>
                         {% endfor %}
                     </ul>
+        </div>
+        {% endblock %}
+
+        {% block styles %}
+        <style>
+            .analysis-page h2 { color: #333; font-weight: 600; }
+            .analysis-kpi, .analysis-detail { height: 100%; padding: 1.1rem 1.2rem; border: 1px solid #e9ecef; border-radius: 10px; background: #fff; box-shadow: 0 2px 10px rgba(20,20,20,.03); }
+            .analysis-kpi { border-top: 3px solid #dc3545; }
+            .analysis-kpi span, .analysis-detail span { display: block; color: #6c757d; font-size: .8rem; }
+            .analysis-kpi strong, .analysis-detail strong { display: block; margin-top: .25rem; color: #212529; font-size: 1.45rem; }
+            .analysis-kpi small, .analysis-detail small { color: #6c757d; }
+            .analysis-detail { border-left: 3px solid #198754; }
+            .analysis-chart { position: relative; height: 300px; }
+            .analysis-chart-short { height: 230px; }
+            .analysis-table th { color: #6c757d; font-size: .75rem; font-weight: 600; text-transform: uppercase; }
+            .analysis-table td { font-size: .9rem; }
+            .type-dot { display: inline-block; width: 9px; height: 9px; margin-right: .45rem; border-radius: 50%; }
+            .type-running { background: #dc3545; } .type-cycling { background: #198754; }
+            .type-swimming { background: #0d6efd; } .type-strength { background: #fd7e14; }
+        </style>
+        {% endblock %}
+
+        {% block scripts %}
+        <script>
+        const analysisLinks = document.getElementsByClassName('nav-link');
+        if (analysisLinks[3]) analysisLinks[3].classList.add('active1');
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const charts = {};
+            const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+            const colors = { running: '#dc3545', cycling: '#198754', swimming: '#0d6efd', strength: '#fd7e14' };
+
+            function formatHours(minutes) { return numberFormat.format((minutes || 0) / 60) + ' h'; }
+            function formatType(type) { return type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown'; }
+            function escapeHtml(value) {
+                return String(value == null ? '' : value).replace(/[&<>'"]/g, function (character) {
+                    return {'&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'}[character];
+                });
+            }
+            function replaceChart(name, config) {
+                if (charts[name]) charts[name].destroy();
+                charts[name] = new Chart(document.getElementById(name + '-chart'), config);
+            }
+
+            function renderAnalysis(data) {
+                const summary = data.summary || {};
+                document.getElementById('analysis-range-label').textContent = data.from + ' to ' + data.to;
+                document.getElementById('metric-sessions').textContent = summary.sessions || 0;
+                document.getElementById('metric-active-days').textContent = (summary.consistency || 0) + '% consistency';
+                document.getElementById('metric-distance').textContent = numberFormat.format(summary.distance || 0) + ' km';
+                document.getElementById('metric-minutes').textContent = formatHours(summary.minutes);
+                document.getElementById('metric-load').textContent = numberFormat.format(summary.load || 0);
+                document.getElementById('metric-elevation').textContent = numberFormat.format(summary.elevation || 0) + ' m';
+
+                const weeks = data.weekly || [];
+                replaceChart('load-trend', { type: 'bar', data: { labels: weeks.map(w => w.label), datasets: [
+                    { type: 'line', label: 'Distance (km)', data: weeks.map(w => w.distance), borderColor: '#dc3545', backgroundColor: '#dc3545', tension: .25, yAxisID: 'distance' },
+                    { label: 'Training load', data: weeks.map(w => w.load), backgroundColor: 'rgba(25,135,84,.65)', borderRadius: 4, yAxisID: 'load' }
+                ]}, options: { responsive: true, maintainAspectRatio: false, scales: {
+                    distance: { beginAtZero: true, position: 'left', title: { display: true, text: 'km' } },
+                    load: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'minutes' } }
+                }} });
+
+                const intensity = data.intensity || [];
+                replaceChart('intensity', { type: 'doughnut', data: { labels: intensity.map(i => i.label), datasets: [{ data: intensity.map(i => i.minutes), backgroundColor: ['#74c0fc', '#ffc107', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+
+                const zones = data.zones || [];
+                replaceChart('zones', { type: 'bar', data: { labels: zones.map(z => z.label), datasets: [{ label: 'Minutes', data: zones.map(z => z.minutes), backgroundColor: ['#74c0fc', '#51cf66', '#ffc107', '#fd7e14', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } } });
+
+                document.getElementById('activity-summary-body').innerHTML = (data.types || []).map(function (item) {
+                    return '<tr><td><span class="type-dot type-' + escapeHtml(item.type) + '"></span>' + escapeHtml(formatType(item.type)) + '</td><td>' + item.sessions + '</td><td>' + numberFormat.format(item.distance || 0) + ' km</td><td>' + formatHours(item.minutes) + '</td></tr>';
+                }).join('');
+
+                const records = data.records || {};
+                document.getElementById('record-pace').textContent = records.best_running_pace ? records.best_running_pace.toFixed(2) + ' min/km' : 'No data';
+                if (records.longest) {
+                    document.getElementById('record-longest').textContent = numberFormat.format(records.longest.distance) + ' km';
+                    document.getElementById('record-longest-detail').textContent = formatType(records.longest.type) + ' - ' + records.longest.date;
+                }
+            }
+
+            function loadAnalysis(days) {
+                document.getElementById('analysis-error').classList.add('d-none');
+                fetch('/api/analysis?days=' + days).then(function (response) {
+                    if (!response.ok) throw new Error('Analysis request failed');
+                    return response.json();
+                }).then(renderAnalysis).catch(function (error) {
+                    console.error(error);
+                    document.getElementById('analysis-error').classList.remove('d-none');
+                });
+            }
+
+            document.querySelectorAll('.analysis-range').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    document.querySelectorAll('.analysis-range').forEach(function (item) { item.classList.remove('active'); });
+                    button.classList.add('active');
+                    loadAnalysis(button.dataset.days);
+                });
+            });
+            loadAnalysis(30);
+        });
+        </script>
+        {% endblock %}
                 </div>
             </div>
         </div>
@@ -110,6 +219,7 @@ current.classList.add('active1');
 </script>
 
 {% endblock %}
+#}
 
 {% block styles %}
 <style>
