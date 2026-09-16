@@ -44,12 +44,9 @@
     .style-workout-strip { opacity: 0.95; transition: opacity 0.2s; font-size: 12px; }
     .style-workout-strip:hover { opacity: 1; }
     .style-workout-strip.planned-entry,
-    .style-workout-strip.planned-entry:hover {
-        background: #adb5bd !important;
-        color: #fff !important;
-        opacity: 0.8;
-    }
-    .style-workout-strip.planned-entry .text-white-50 { color: rgba(255,255,255,0.7) !important; }
+    .style-workout-strip.planned-entry:hover { color: #27313d !important; opacity: 1; }
+    .style-workout-strip,
+    .style-workout-strip * { color: #27313d !important; }
     .daily-metric-strip { background: linear-gradient(90deg,#b89ad9,#d7c4ea) !important; padding: .4rem .6rem !important; font-size: 12px; line-height: 1.2; }
     .calendar-day-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
     .calendar-day-action { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px; line-height: 1; text-decoration: none; }
@@ -254,9 +251,9 @@ document.addEventListener('DOMContentLoaded', function(){
                     var color = activityColor(w.type);
                     var aid = (w.id!==undefined && w.id!==null) ? w.id : '';
                     var entryType = (w.entry_type || w.status || 'done');
-                    html += '<div class="p-2 mb-1 rounded text-white style-workout-strip '+cls+'" data-activity-id="'+aid+'" data-entry-type="'+entryType+'" onclick="openActivity('+aid+', \''+entryType+'\')" style="cursor:pointer;'+(cls === 'catalog-activity-entry' ? 'background:'+color+';' : '')+'">';
+                    html += '<div class="p-2 px-3 mb-1 rounded style-workout-strip '+cls+'" data-activity-id="'+aid+'" data-entry-type="'+entryType+'" onclick="openActivity('+aid+', \''+entryType+'\')" style="cursor:pointer;background:color-mix(in srgb, '+color+' 20%, white);border-left:3px solid '+color+';color:#27313d;">';
                     html += '<div class="fw-bold text-truncate">'+ (w.title||w.type) +'</div>';
-                    html += '<div class="d-flex justify-content-between text-white-50 mt-1 small"><span>'+ (w.distance||'') + 'k</span><span>'+ (w.time||'') +'</span></div>';
+                    html += '<div class="d-flex justify-content-between mt-1 small"><span>'+ (w.distance||'') + 'k</span><span>'+ (w.time||'') +'</span></div>';
                     html += '</div>';
                 });
             } else {

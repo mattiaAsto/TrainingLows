@@ -34,6 +34,10 @@ def suggest_phases(season, actor_id):
     if not objectives:
         return []
 
+    planning_end = max(
+        [date(season.season_year, 12, 31)]
+        + [objective.event_date for objective in objectives if objective.status == 'planned']
+    )
     generated = [phase for phase in season.phases if phase.generation_source == 'automatic' and not phase.is_manually_edited]
     for phase in generated:
         db.session.delete(phase)
@@ -51,7 +55,7 @@ def suggest_phases(season, actor_id):
         ]
         for phase_type, start_date, end_date in windows:
             start_date = max(start_date, date(season.season_year, 1, 1))
-            end_date = min(end_date, date(season.season_year, 12, 31))
+            end_date = min(end_date, planning_end)
             if start_date > end_date:
                 continue
             name, color = PHASE_DEFAULTS[phase_type]

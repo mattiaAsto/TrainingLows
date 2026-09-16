@@ -4,90 +4,296 @@
         "color": "#dc3545",
         "unit": "km",
         "category": "endurance",
-        "model": "Running"
+        "model": "Running",
+        "specific_data": {
+            "pace_min_km": {
+                "label": "Average pace",
+                "datatype": "float",
+                "unit": "min/km",
+                "min": 0
+            },
+            "surface": {
+                "label": "Surface",
+                "datatype": "select",
+                "options": [
+                    "road",
+                    "trail",
+                    "track"
+                ]
+            }
+        }
     },
     "cycling": {
         "label": "Cycling",
         "color": "#198754",
         "unit": "km",
         "category": "endurance",
-        "model": "Cycling"
+        "model": "Cycling",
+        "specific_data": {
+            "speed_km_h": {
+                "label": "Average speed",
+                "datatype": "float",
+                "unit": "km/h",
+                "min": 0
+            },
+            "bike_type": {
+                "label": "Bike type",
+                "datatype": "select",
+                "options": [
+                    "road",
+                    "mountain",
+                    "hybrid"
+                ]
+            },
+            "terrain": {
+                "label": "Terrain",
+                "datatype": "select",
+                "options": [
+                    "road",
+                    "trail",
+                    "mixed"
+                ]
+            }
+        }
     },
     "swimming": {
         "label": "Swimming",
         "color": "#0d6efd",
         "unit": "km",
         "category": "endurance",
-        "model": "Swimming"
+        "model": "Swimming",
+        "specific_data": {
+            "pool_length_m": {
+                "label": "Pool length",
+                "datatype": "float",
+                "unit": "m",
+                "min": 0
+            },
+            "strokes": {
+                "label": "Primary stroke",
+                "datatype": "select",
+                "options": [
+                    "freestyle",
+                    "backstroke",
+                    "breaststroke",
+                    "butterfly"
+                ]
+            },
+            "water_type": {
+                "label": "Water type",
+                "datatype": "select",
+                "options": [
+                    "pool",
+                    "ocean",
+                    "lake"
+                ]
+            }
+        }
     },
     "strength": {
         "label": "Strength",
         "color": "#fd7e14",
         "unit": "min",
         "category": "strength",
-        "model": "Strenght"
+        "model": "Strenght",
+        "specific_data": {
+            "strength_type": {
+                "label": "Strength focus",
+                "datatype": "select",
+                "options": [
+                    "general",
+                    "maximal",
+                    "resistance",
+                    "power"
+                ]
+            }
+        }
     },
     "walking": {
         "label": "Walking",
         "color": "#6c757d",
         "unit": "km",
         "category": "endurance",
-        "model": "Walking"
+        "model": "Walking",
+        "specific_data": {
+            "terrain": {
+                "label": "Terrain",
+                "datatype": "select",
+                "options": [
+                    "road",
+                    "trail",
+                    "mixed"
+                ]
+            }
+        }
     },
     "hiking": {
         "label": "Hiking",
         "color": "#8a6d3b",
         "unit": "km",
         "category": "endurance",
-        "model": "Hiking"
+        "model": "Hiking",
+        "specific_data": {
+            "terrain": {
+                "label": "Terrain",
+                "datatype": "select",
+                "options": [
+                    "trail",
+                    "mountain",
+                    "mixed"
+                ]
+            },
+            "pack_weight_kg": {
+                "label": "Pack weight",
+                "datatype": "float",
+                "unit": "kg",
+                "min": 0
+            }
+        }
     },
     "rowing": {
         "label": "Rowing",
         "color": "#20c997",
         "unit": "km",
         "category": "endurance",
-        "model": "Rowing"
+        "model": "Rowing",
+        "specific_data": {
+            "boat_type": {
+                "label": "Boat type",
+                "datatype": "select",
+                "options": [
+                    "ergometer",
+                    "single",
+                    "crew"
+                ]
+            },
+            "stroke_rate": {
+                "label": "Stroke rate",
+                "datatype": "integer",
+                "unit": "spm",
+                "min": 0
+            }
+        }
     },
     "yoga": {
         "label": "Yoga",
         "color": "#6f42c1",
         "unit": "min",
         "category": "mobility",
-        "model": "Yoga"
+        "model": "Yoga",
+        "specific_data": {
+            "style": {
+                "label": "Style",
+                "datatype": "select",
+                "options": [
+                    "hatha",
+                    "vinyasa",
+                    "yin",
+                    "power"
+                ]
+            }
+        }
     },
     "multisport": {
         "label": "Multisport",
         "color": "#343a40",
         "unit": "km",
         "category": "multisport",
-        "model": "Multisport"
+        "model": "Multisport",
+        "specific_data": {
+            "disciplines": {
+                "label": "Disciplines",
+                "datatype": "text",
+                "placeholder": "Run, bike, swim"
+            }
+        }
     },
     "skiing": {
         "label": "Skiing",
         "color": "#17a2b8",
         "unit": "km",
         "category": "endurance",
-        "model": "Skiing"
+        "model": "Skiing",
+        "specific_data": {
+            "ski_type": {
+                "label": "Ski type",
+                "datatype": "select",
+                "options": [
+                    "alpine",
+                    "cross-country",
+                    "telemark"
+                ]
+            },
+            "terrain": {
+                "label": "Terrain",
+                "datatype": "select",
+                "options": [
+                    "piste",
+                    "off-piste",
+                    "mixed"
+                ]
+            }
+        }
     },
     "stretching": {
         "label": "Stretching",
         "color": "#e83e8c",
         "unit": "min",
         "category": "mobility",
-        "model": "Stretching"
+        "model": "Stretching",
+        "specific_data": {
+            "focus": {
+                "label": "Focus",
+                "datatype": "text",
+                "placeholder": "Hips, shoulders..."
+            }
+        }
     },
     "climbing": {
         "label": "Climbing",
         "color": "#795548",
         "unit": "min",
         "category": "strength",
-        "model": "Climbing"
+        "model": "Climbing",
+        "specific_data": {
+            "climbing_type": {
+                "label": "Climbing type",
+                "datatype": "select",
+                "options": [
+                    "bouldering",
+                    "sport",
+                    "trad",
+                    "indoor"
+                ]
+            },
+            "grade": {
+                "label": "Highest grade",
+                "datatype": "text"
+            }
+        }
     },
     "skitouring": {
         "label": "Skitouring",
         "color": "#f5f542",
         "unit": "km",
         "category": "endurance",
-        "model": "Skitouring"
+        "model": "Skitouring",
+        "specific_data": {
+            "terrain": {
+                "label": "Terrain",
+                "datatype": "select",
+                "options": [
+                    "alpine",
+                    "glacier",
+                    "mixed"
+                ]
+            },
+            "vertical_gain_m": {
+                "label": "Vertical gain",
+                "datatype": "float",
+                "unit": "m",
+                "min": 0
+            }
+        }
     }
 }

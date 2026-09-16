@@ -149,15 +149,19 @@ def home():
         value = actual_totals.get(activity_type, 0)
         goal = planned_totals.get(activity_type, 0)
         unit = ACTIVITY_DEFINITIONS[activity_type]['unit']
-        progress = (100 * value / goal) if goal else 0
-        if progress > 100:
-            progress = 100
+        has_goal = goal > 0
+        if has_goal:
+            progress = min(100, 100 * value / goal)
+        else:
+            # No plan set: still show a pleasant bar instead of an empty one.
+            progress = 100 if value > 0 else 8
         weekly_breakdown.append({
             'label': ACTIVITY_LABELS.get(activity_type, activity_type.title()),
             'value': value,
             'goal': goal,
             'unit': unit,
             'progress': progress,
+            'has_goal': has_goal,
             'color_class': activity_type,
             'color': ACTIVITY_COLORS.get(activity_type, '#6c757d'),
         })
@@ -197,6 +201,16 @@ def recovery_assessment(athlete_id, as_of=None):
         'hrv': average(baseline, 'hrv_ms'),
     }
     alerts = []
+    athlete = Athlete.query.get(athlete_id)
+    self_reported_state = getattr(athlete, 'self_reported_state', 'ready') if athlete else 'ready'
+    self_reported_labels = {
+        'fatigued': 'Fatigued',
+        'rest': 'Needs extra rest',
+        'sick': 'Sick',
+        'injured': 'Injured',
+    }
+    if self_reported_state in self_reported_labels:
+        alerts.append(f"Athlete reported: {self_reported_labels[self_reported_state]}.")
     if recent_values['readiness'] is not None and recent_values['readiness'] < 60:
         alerts.append('Readiness is below 60.')
     if recent_values['sleep'] is not None and recent_values['sleep'] < 7:
@@ -207,6 +221,9 @@ def recovery_assessment(athlete_id, as_of=None):
         alerts.append('HRV is suppressed versus baseline.')
     return {
         'status': 'attention' if alerts else ('stable' if recent else 'missing'),
+        'self_reported_state': self_reported_state,
+        'self_reported_note': getattr(athlete, 'self_reported_note', None) if athlete else None,
+        'self_reported_at': getattr(athlete, 'self_reported_at', None) if athlete else None,
         'alerts': alerts,
         'recent': {key: round(value, 1) if value is not None else None for key, value in recent_values.items()},
         'baseline': {key: round(value, 1) if value is not None else None for key, value in baseline_values.items()},
@@ -224,6 +241,9 @@ def trainer_dashboard():
     cards = []
 
     for athlete in athletes:
+        recent_activities = Activity.query.filter_by(
+            athlete_id=athlete.id,
+        ).order_by(Activity.date.desc()).limit(8).all()
         activities = Activity.query.filter(
             Activity.athlete_id == athlete.id,
             Activity.date >= datetime.combine(week_start, datetime.min.time()),
@@ -234,6 +254,16 @@ def trainer_dashboard():
             PlannedActivity.planned_date >= datetime.combine(today, datetime.min.time()),
             PlannedActivity.planned_date < datetime.combine(today + timedelta(days=7), datetime.min.time()),
         ).order_by(PlannedActivity.planned_date.asc()).all()
+        previous_planned = PlannedActivity.query.filter(
+            PlannedActivity.athlete_id == athlete.id,
+            PlannedActivity.planned_date >= datetime.combine(today - timedelta(days=7), datetime.min.time()),
+            PlannedActivity.planned_date < datetime.combine(today, datetime.min.time()),
+        ).all()
+        previous_completed = Activity.query.filter(
+            Activity.athlete_id == athlete.id,
+            Activity.date >= datetime.combine(today - timedelta(days=7), datetime.min.time()),
+            Activity.date < datetime.combine(today, datetime.min.time()),
+        ).all()
         recovery_status = recovery_assessment(athlete.id, today)
         recovery = DailyMetric.query.filter(
             DailyMetric.athlete_id == athlete.id,
@@ -247,24 +277,93 @@ def trainer_dashboard():
             TrainingObjective.event_date >= today,
             TrainingObjective.status == 'planned',
         ).order_by(TrainingObjective.event_date.asc()).first()
+        completed_dates = {item.date.date() for item in previous_completed}
+        missed = [item for item in previous_planned if item.planned_date.date() not in completed_dates]
+        compliance = round((1 - len(missed) / len(previous_planned)) * 100, 1) if previous_planned else None
         readiness_values = [item.readiness_score for item in recovery if item.readiness_score is not None]
         sleep_values = [item.sleep_duration_minutes / 60 for item in recovery if item.sleep_duration_minutes is not None]
         weekly_tss = round(sum(_estimate_activity_tss(item) for item in activities), 1)
         cards.append({
             'athlete': athlete,
             'is_self': athlete.id == current_user.id,
+            'self_state': getattr(athlete, 'self_reported_state', 'ready'),
+            'self_note': getattr(athlete, 'self_reported_note', None),
+            'recent_activities': recent_activities,
+            'stats': {
+                'total_distance': round(sum((item.distance_km or 0) for item in recent_activities), 1),
+                'total_sessions': len(recent_activities),
+                'total_minutes': round(sum((item.duration_seconds or 0) / 60 for item in recent_activities), 0),
+            },
             'phase': current_phase,
             'objective': next_objective,
+            'objective_days': (next_objective.event_date - today).days if next_objective else None,
             'activities': len(activities),
             'planned': planned,
+            'missed': missed,
+            'previous_planned': len(previous_planned),
+            'previous_completed': len(previous_completed),
+            'compliance': compliance,
             'tss': weekly_tss,
             'readiness': round(sum(readiness_values) / len(readiness_values), 1) if readiness_values else None,
             'sleep': round(sum(sleep_values) / len(sleep_values), 1) if sleep_values else None,
             'needs_attention': recovery_status['status'] == 'attention',
             'recovery_status': recovery_status,
+            'links': {
+                'calendar': url_for('settings.switch_athlete', athlete_id=athlete.id, next='calendar'),
+                'graphs': url_for('settings.switch_athlete', athlete_id=athlete.id, next='graphs'),
+                'analysis': url_for('settings.switch_athlete', athlete_id=athlete.id, next='analysis'),
+                'planning': url_for('settings.switch_athlete', athlete_id=athlete.id, next='planning'),
+                'session': url_for('settings.switch_athlete', athlete_id=athlete.id, next='session'),
+            },
         })
 
     return render_template('trainer_dashboard.html', cards=cards, week_start=week_start, week_end=week_end - timedelta(days=1))
+
+
+@main.route('/trainer-dashboard/athlete/<int:athlete_id>')
+def trainer_athlete_detail(athlete_id):
+    if not current_user.is_trainer:
+        abort(403)
+    athlete = Athlete.query.get_or_404(athlete_id)
+    if not athlete_is_visible(athlete):
+        abort(403)
+
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    recent_activities = Activity.query.filter_by(athlete_id=athlete.id).order_by(Activity.date.desc()).limit(12).all()
+    planned = PlannedActivity.query.filter(
+        PlannedActivity.athlete_id == athlete.id,
+        PlannedActivity.planned_date >= datetime.combine(today, datetime.min.time()),
+    ).order_by(PlannedActivity.planned_date.asc()).limit(12).all()
+    recovery_status = recovery_assessment(athlete.id, today)
+    metrics = DailyMetric.query.filter_by(athlete_id=athlete.id).order_by(DailyMetric.metric_date.desc()).limit(7).all()
+    season = TrainingSeason.query.filter_by(athlete_id=athlete.id, season_year=today.year).first()
+    current_phase = next((phase for phase in season.phases if phase.start_date <= today <= phase.end_date), None) if season else None
+    objectives = TrainingObjective.query.filter(
+        TrainingObjective.season_id == season.id if season else false(),
+        TrainingObjective.event_date >= today,
+        TrainingObjective.status == 'planned',
+    ).order_by(TrainingObjective.event_date.asc()).limit(5).all()
+    return render_template(
+        'trainer_athlete_detail.html',
+        athlete=athlete,
+        recent_activities=recent_activities,
+        planned=planned,
+        metrics=metrics,
+        recovery_status=recovery_status,
+        current_phase=current_phase,
+        objectives=objectives,
+        week_start=week_start,
+        links={
+            'dashboard': url_for('main.trainer_dashboard'),
+            'roster': url_for('settings.roster'),
+            'calendar': url_for('settings.switch_athlete', athlete_id=athlete.id, next='calendar'),
+            'planning': url_for('settings.switch_athlete', athlete_id=athlete.id, next='planning'),
+            'session': url_for('settings.switch_athlete', athlete_id=athlete.id, next='session'),
+            'graphs': url_for('settings.switch_athlete', athlete_id=athlete.id, next='graphs'),
+            'analysis': url_for('settings.switch_athlete', athlete_id=athlete.id, next='analysis'),
+        },
+    )
 
 
 @main.route("/calendar")
@@ -381,7 +480,14 @@ def _activity_to_dict(a, entry_type='done'):
         'is_future_planned': entry_type == 'planned' and getattr(a, 'planned_date', None) is not None and a.planned_date >= datetime.now(),
     }
 
-def activity_query(start_dt, end_dt, activity_type=None):
+def _requested_activity_types():
+    raw_types = request.args.get('types')
+    if raw_types is None:
+        return list(ALL_ACTIVITY_TYPES)
+    return [activity_type for activity_type in raw_types.split(',') if activity_type in ALL_ACTIVITY_TYPES]
+
+
+def activity_query(start_dt, end_dt, activity_type=None, activity_types=None):
     q = Activity.query
     athlete_id = get_current_athlete_id()
     if not athlete_id:
@@ -390,6 +496,8 @@ def activity_query(start_dt, end_dt, activity_type=None):
     q = q.filter(Activity.date >= start_dt, Activity.date <= end_dt)
     if activity_type:
         q = q.filter(Activity.activity_type == activity_type)
+    elif activity_types is not None:
+        q = q.filter(Activity.activity_type.in_(activity_types))
     return q
 
 
@@ -516,25 +624,28 @@ def api_calendar_phases():
 @main.route('/api/graphs/activity_distribution')
 def api_graphs_activity_distribution():
     view = request.args.get('view', 'week').lower()
+    selected_types = _requested_activity_types()
     start_dt, end_dt = _timespan_bounds(view)
-    activities = activity_query(start_dt, end_dt).all()
+    activities = activity_query(start_dt, end_dt, activity_types=selected_types).all()
 
-    totals = {tp: 0.0 for tp in ALL_ACTIVITY_TYPES}
+    totals = {tp: 0.0 for tp in selected_types}
     for activity in activities:
         if activity.activity_type in totals:
             totals[activity.activity_type] += _activity_value_for_chart(activity)
 
-    labels = [tp.capitalize() for tp in totals.keys()]
+    types = list(totals.keys())
+    labels = [ACTIVITY_LABELS.get(tp, tp.title()) for tp in types]
     values = [round(v, 1) for v in totals.values()]
 
-    return jsonify({'view': view, 'labels': labels, 'values': values})
+    return jsonify({'view': view, 'types': types, 'labels': labels, 'values': values})
 
 
 @main.route('/api/graphs/intensity_distribution')
 def api_graphs_intensity_distribution():
     view = request.args.get('view', 'week').lower()
+    selected_types = _requested_activity_types()
     start_dt, end_dt = _timespan_bounds(view)
-    activities = activity_query(start_dt, end_dt).all()
+    activities = activity_query(start_dt, end_dt, activity_types=selected_types).all()
 
     zone_times = {'z1': 0, 'z2': 0, 'z3': 0, 'z4': 0, 'z5': 0}
     for activity in activities:
@@ -553,8 +664,9 @@ def api_graphs_intensity_distribution():
 @main.route('/api/graphs/performance')
 def api_graphs_performance():
     view = request.args.get('view', 'week').lower()
+    selected_types = _requested_activity_types()
     start_dt, end_dt = _timespan_bounds(view)
-    activities = activity_query(start_dt, end_dt).all()
+    activities = activity_query(start_dt, end_dt, activity_types=selected_types).all()
 
     metrics = {
         'Distance (km)': 0.0,
@@ -578,18 +690,20 @@ def api_graphs_performance():
 @main.route('/api/graphs/calories_by_activity')
 def api_graphs_calories_by_activity():
     view = request.args.get('view', 'week').lower()
+    selected_types = _requested_activity_types()
     start_dt, end_dt = _timespan_bounds(view)
-    activities = activity_query(start_dt, end_dt).all()
+    activities = activity_query(start_dt, end_dt, activity_types=selected_types).all()
 
-    calories = {tp: 0 for tp in ALL_ACTIVITY_TYPES}
+    calories = {tp: 0 for tp in selected_types}
     for activity in activities:
         if activity.activity_type in calories:
             calories[activity.activity_type] += getattr(activity, 'calories_burned', 0) or 0
 
-    labels = [tp.capitalize() for tp in calories.keys()]
+    types = list(calories.keys())
+    labels = [ACTIVITY_LABELS.get(tp, tp.title()) for tp in types]
     values = [calories[tp] for tp in calories.keys()]
 
-    return jsonify({'view': view, 'labels': labels, 'values': values})
+    return jsonify({'view': view, 'types': types, 'labels': labels, 'values': values})
 
 
 @main.route('/api/graphs/daily_metrics')
@@ -740,8 +854,9 @@ def graphs():
 def api_graphs_week():
     # return same structure as graphs() but as JSON
     weekly_data_array = []
+    selected_types = _requested_activity_types()
     next_sunday = date.today() + timedelta(days=6-(date.today().weekday()))
-    for activity_type in ALL_ACTIVITY_TYPES:
+    for activity_type in selected_types:
         weekly_data = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
         for i in range(9,-1,-1):
             stop = next_sunday + timedelta(weeks=-i)
@@ -763,11 +878,12 @@ def api_graphs_month():
     except Exception:
         year = date.today().year; month = date.today().month
 
+    selected_types = _requested_activity_types()
     # days in month
     _, ndays = _calendar.monthrange(year, month)
 
     result = []
-    for activity_type in ALL_ACTIVITY_TYPES:
+    for activity_type in selected_types:
         row = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
         for d in range(1, ndays+1):
             start_dt = datetime(year, month, d)
@@ -788,8 +904,9 @@ def api_graphs_year():
     except Exception:
         year = date.today().year
 
+    selected_types = _requested_activity_types()
     result = []
-    for activity_type in ALL_ACTIVITY_TYPES:
+    for activity_type in selected_types:
         row = { 'activitytype': activity_type, 'labels': [], 'distances': [] }
         for m in range(1,13):
             start_dt = datetime(year, m, 1)

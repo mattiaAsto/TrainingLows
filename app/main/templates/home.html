@@ -78,7 +78,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Recent Activities</h5>
                     {% for activity in recent_activities|default([]) %}
-                    <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded bg-white">
+                    <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded activity-list-item"{% if user.activity_tint_enabled %} style="--activity-color: {{ activity_colors.get(activity.activity_type, '#6c757d') }}; background:color-mix(in srgb, var(--activity-color) 10%, white); border-left:3px solid var(--activity-color);"{% endif %}>
                         <div>
                             <div class="fw-semibold">{{ (activity.title|default(activity.activity_type)) |capitalize }}</div>
                             <div class="text-muted small">{{ activity.date|date_eu }} • {{ activity.activity_type |capitalize}}</div>
@@ -104,10 +104,10 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small mb-1">
                             <div>{{ item.label }}</div>
-                            <div>{{ item.value|default(0)|round(1) }} / {{ item.goal|default(0)|round(1) }} {{ item.unit }}</div>
+                            <div>{{ item.value|default(0)|round(1) }} / {{ item.goal|default(0)|round(1) }} {{ item.unit }}{% if not item.has_goal %} <span class="text-muted">(no plan)</span>{% endif %}</div>
                         </div>
                         <div class="progress" style="height:10px; border-radius:6px; overflow:hidden; background:#f1f3f5;">
-                            <div class="progress-bar progress-{{ item.color_class }}" style="background: {{ item.color|default('#6c757d') }};" data-progress="{{ item.progress|default(0) }}"></div>
+                            <div class="progress-bar progress-{{ item.color_class }} {% if not item.has_goal and not item.value %}placeholder-bar{% endif %}" style="{% if item.has_goal or item.value %}background: {{ item.color|default('#6c757d') }};{% endif %}" data-progress="{{ item.progress|default(0) }}"></div>
                         </div>
                     </div>
                     {% endfor %}
@@ -124,6 +124,7 @@
     .progress-cycling { background: #28a745; }
     .progress-swimming { background: #007bff; }
     .progress-strength { background: #fd7e14; }
+    .placeholder-bar { background: repeating-linear-gradient(45deg, #dee2e6, #dee2e6 6px, #e9ecef 6px, #e9ecef 12px) !important; }
     .card { border-radius: 10px; }
     .card .card-body h5, .card .card-title { color: #333; }
     /* subtle accent top border for important cards */

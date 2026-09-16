@@ -4,7 +4,13 @@
 <div class="app-page-shell">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0" style="color:#333; font-weight:600;">Graphs & Trends</h2>
-        <small class="text-muted">Visualize weekly and monthly trends</small>
+        <div class="dropdown activity-filter">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="activityFilterButton">All activity types</button>
+            <div class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="activityFilterButton" id="activityFilterMenu">
+                <div class="activity-filter-actions"><button type="button" class="btn btn-link btn-sm p-0" id="selectAllActivities">Select all</button><button type="button" class="btn btn-link btn-sm p-0" id="clearAllActivities">Clear</button></div>
+                {% for activity_type, label in activity_labels.items() %}<label class="activity-option"><input class="form-check-input activity-type-check" type="checkbox" value="{{ activity_type }}" checked><span class="activity-swatch" style="background:{{ activity_colors.get(activity_type, '#6c757d') }}"></span>{{ label }}</label>{% endfor %}
+            </div>
+        </div>
     </div>
 
     <div class="row g-3">
@@ -21,8 +27,9 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-graph-view="year">Year</button>
                             </div>
                         </div>
-                        <div>
+                        <div class="graph-header-actions">
                             <button id="weeklyToggleBtn" class="btn btn-sm btn-outline-secondary" data-mode="specific">Show Total</button>
+                            <button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="weeklyDistanceChart" data-graph-title="Weekly Distance Trend" aria-label="Expand Weekly Distance Trend" title="Expand graph"><i class="fas fa-expand"></i></button>
                         </div>
                     </div>
                     <div class="chart-container" style="height:260px;">
@@ -37,11 +44,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="card-title mb-0">Activity Distribution</h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="activity distribution view">
+                        <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="activity distribution view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="activity" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="year">Year</button>
-                        </div>
+                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="activityDonutChart" data-graph-title="Activity Distribution" aria-label="Expand Activity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
                     <div class="chart-container" style="height:260px;">
                         <canvas id="activityDonutChart"></canvas>
@@ -55,11 +62,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="card-title mb-0">Sleep & readiness</h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="daily metrics view">
+                        <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="daily metrics view">
                             <button type="button" class="btn btn-outline-secondary active" data-metrics-view="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-metrics-view="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-metrics-view="year">Year</button>
-                        </div>
+                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailySleepChart" data-graph-title="Sleep and Readiness" aria-label="Expand Sleep and Readiness" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
                     <div class="chart-container" style="height:260px;"><canvas id="dailySleepChart"></canvas></div>
                 </div>
@@ -71,7 +78,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="card-title mb-0">Resting HR & HRV</h5>
-                        <span class="text-muted small">daily records</span>
+                        <div class="graph-header-actions"><span class="text-muted small">daily records</span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailyVitalsChart" data-graph-title="Resting HR and HRV" aria-label="Expand Resting HR and HRV" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
                     <div class="chart-container" style="height:260px;"><canvas id="dailyVitalsChart"></canvas></div>
                 </div>
@@ -83,11 +90,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="card-title mb-0">Calories by Activity Type</h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="calories view">
+                        <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="calories view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="calories" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="year">Year</button>
-                        </div>
+                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="caloriesBarChart" data-graph-title="Calories by Activity Type" aria-label="Expand Calories by Activity Type" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
                     <div class="chart-container" style="height:220px;">
                         <canvas id="caloriesBarChart"></canvas>
@@ -99,7 +106,7 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Intensity Distribution</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2"><h5 class="card-title mb-0">Intensity Distribution</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensityPolarChart" data-graph-title="Intensity Distribution" aria-label="Expand Intensity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     <div class="chart-container" style="height:220px;">
                         <canvas id="intensityPolarChart"></canvas>
                     </div>
@@ -112,11 +119,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="card-title mb-0">Performance Summary</h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="performance view">
+                        <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="performance view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="performance" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="year">Year</button>
-                        </div>
+                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="performanceRadarChart" data-graph-title="Performance Summary" aria-label="Expand Performance Summary" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
                     <div class="chart-container" style="height:400px;">
                         <canvas id="performanceRadarChart"></canvas>
@@ -127,11 +134,60 @@
 
     </div>
 
+    <div class="graph-overlay" id="graphOverlay" aria-hidden="true">
+        <div class="graph-overlay-backdrop" data-graph-close></div>
+        <section class="graph-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="graphOverlayTitle">
+            <div class="graph-overlay-header"><h2 id="graphOverlayTitle"></h2><button class="btn graph-overlay-close" type="button" data-graph-close aria-label="Close expanded graph"><i class="fas fa-xmark"></i></button></div>
+            <div class="graph-overlay-stage" id="graphOverlayStage"></div>
+        </section>
+    </div>
+
     <!--Graphs-->  
 
     <script>
     // Placeholder: real data should be provided by the view via Jinja
     document.addEventListener('DOMContentLoaded', function(){
+        const graphOverlay = document.getElementById('graphOverlay');
+        const graphOverlayStage = document.getElementById('graphOverlayStage');
+        const graphOverlayTitle = document.getElementById('graphOverlayTitle');
+        let expandedCanvas = null;
+        let expandedCanvasParent = null;
+        let expandedCanvasNextSibling = null;
+
+        function closeExpandedGraph() {
+            if (!expandedCanvas) return;
+            if (expandedCanvasNextSibling) expandedCanvasParent.insertBefore(expandedCanvas, expandedCanvasNextSibling);
+            else expandedCanvasParent.appendChild(expandedCanvas);
+            expandedCanvas = null;
+            expandedCanvasParent = null;
+            expandedCanvasNextSibling = null;
+            graphOverlay.classList.remove('is-open');
+            graphOverlay.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('graph-overlay-open');
+        }
+
+        document.querySelectorAll('.graph-expand-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const canvas = document.getElementById(button.dataset.graphTarget);
+                if (!canvas || expandedCanvas) return;
+                expandedCanvas = canvas;
+                expandedCanvasParent = canvas.parentElement;
+                expandedCanvasNextSibling = canvas.nextSibling;
+                graphOverlayTitle.textContent = button.dataset.graphTitle;
+                graphOverlayStage.appendChild(canvas);
+                graphOverlay.classList.add('is-open');
+                graphOverlay.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('graph-overlay-open');
+                window.setTimeout(function() {
+                    if (typeof Chart === 'undefined') return;
+                    const chartByCanvas = { weeklyDistanceChart: weeklyChart, activityDonutChart: donutChart, caloriesBarChart: caloriesBarChart, intensityPolarChart: intensityChart, performanceRadarChart: performanceChart, dailySleepChart: dailySleepChart, dailyVitalsChart: dailyVitalsChart };
+                    if (chartByCanvas[button.dataset.graphTarget]) chartByCanvas[button.dataset.graphTarget].resize();
+                }, 50);
+            });
+        });
+        document.querySelectorAll('[data-graph-close]').forEach(function(element) { element.addEventListener('click', closeExpandedGraph); });
+        document.addEventListener('keydown', function(event) { if (event.key === 'Escape') closeExpandedGraph(); });
+
         // If Chart.js is loaded by the base template, these canvases can be initialized here.
         // Example placeholder behavior: show friendly message when Chart.js missing.
         if (typeof Chart === 'undefined') {
@@ -159,6 +215,51 @@
             z5: '#dc3545'
         };
 
+        const activityFilterButton = document.getElementById('activityFilterButton');
+        const activityTypeChecks = Array.from(document.querySelectorAll('.activity-type-check'));
+        const activityStorageKey = 'traininglows.graphActivityTypes.{{ user.id if user.is_authenticated else "guest" }}';
+        function selectedActivityTypes() {
+            return activityTypeChecks.filter(check => check.checked).map(check => check.value);
+        }
+        function restoreActivityTypes() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(activityStorageKey));
+                if (!Array.isArray(saved)) return;
+                activityTypeChecks.forEach(check => { check.checked = saved.includes(check.value); });
+            } catch (error) {
+                console.warn('Could not restore graph activity filters', error);
+            }
+        }
+        function saveActivityTypes() {
+            try {
+                localStorage.setItem(activityStorageKey, JSON.stringify(selectedActivityTypes()));
+            } catch (error) {
+                console.warn('Could not save graph activity filters', error);
+            }
+        }
+        function graphQuery() {
+            const selected = selectedActivityTypes();
+            return selected.length ? '&types=' + encodeURIComponent(selected.join(',')) : '&types=';
+        }
+        function updateActivityFilterLabel() {
+            const count = selectedActivityTypes().length;
+            activityFilterButton.textContent = count === activityTypeChecks.length ? 'All activity types' : count + ' activity type' + (count === 1 ? '' : 's') + ' selected';
+        }
+        function refreshActivityGraphs() {
+            const activeGraph = document.querySelector('[data-graph-view].active');
+            const activeActivity = document.querySelector('[data-timespan-target="activity"].active');
+            const activeIntensity = document.querySelector('[data-timespan-target="intensity"].active');
+            const activePerformance = document.querySelector('[data-timespan-target="performance"].active');
+            const activeCalories = document.querySelector('[data-timespan-target="calories"].active');
+            fetchGraph(activeGraph ? activeGraph.getAttribute('data-graph-view') : 'week');
+            fetchActivityDistribution(activeActivity ? activeActivity.getAttribute('data-timespan') : 'week');
+            fetchIntensityDistribution(activeIntensity ? activeIntensity.getAttribute('data-timespan') : 'week');
+            fetchPerformance(activePerformance ? activePerformance.getAttribute('data-timespan') : 'week');
+            fetchCaloriesBar(activeCalories ? activeCalories.getAttribute('data-timespan') : 'week');
+        }
+
+        restoreActivityTypes();
+
         // Helper to obtain activity type (support multiple keys from backend)
         const getActivityType = (a) => a.activitytype || a.activity_type || a.activityType || a.type || 'activity';
         const weeklyCtx = document.getElementById('weeklyDistanceChart').getContext('2d');
@@ -176,6 +277,7 @@
 
         function renderGraph(dataArray) {
             const labelsLocal = (dataArray.find(a => a.labels && a.labels.length) || {}).labels || [];
+            const showArea = dataArray.length <= 3;
             const ds = dataArray.map(a => {
                 const atype = getActivityType(a);
                 const border = colors[atype] ?? '#6c757d';
@@ -184,18 +286,18 @@
                     label: activityLabels[atype] || (atype.charAt(0).toUpperCase() + atype.slice(1)),
                     data: (a.distances || []).map(Number),
                     borderColor: border,
-                    backgroundColor: bg,
+                    backgroundColor: showArea ? bg : 'transparent',
                     tension: 0.2,
-                    fill: true,
+                    fill: showArea,
                 };
             });
             const total = [{
                 label: 'Total distance',
                 data: labelsLocal.map((_, idx) => dataArray.reduce((s, a) => s + Number((a.distances||[])[idx] || 0), 0)),
                 borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13,110,253,0.12)',
+                backgroundColor: showArea ? 'rgba(13,110,253,0.12)' : 'transparent',
                 tension: 0.2,
-                fill: true,
+                fill: showArea,
             }];
             if (weeklyChart) {
                 weeklyChart.destroy();
@@ -221,7 +323,7 @@
             function renderActivityDistribution(payload) {
                 const labels = payload.labels || [];
                 const values = payload.values || [];
-                const bgColors = labels.map((label, idx) => colors[Object.keys(colors)[idx]] || '#6c757d');
+                const bgColors = (payload.types || []).map(type => colors[type] || '#6c757d');
                 if (!donutChart) {
                     donutChart = new Chart(donutCtx, {
                         type: 'doughnut',
@@ -324,6 +426,7 @@
                 } else if (view === 'year') {
                     const now = new Date(); url += '?year=' + now.getFullYear();
                 }
+                url += (url.includes('?') ? '&' : '?') + 'types=' + encodeURIComponent(selectedActivityTypes().join(','));
                 fetchJson(url, function(payload){
                     const data = payload.data || [];
                     renderGraph(data);
@@ -331,22 +434,22 @@
             }
 
             function fetchActivityDistribution(view) {
-                const url = '/api/graphs/activity_distribution?view=' + view;
+                const url = '/api/graphs/activity_distribution?view=' + view + graphQuery();
                 fetchJson(url, renderActivityDistribution);
             }
 
             function fetchIntensityDistribution(view) {
-                const url = '/api/graphs/intensity_distribution?view=' + view;
+                const url = '/api/graphs/intensity_distribution?view=' + view + graphQuery();
                 fetchJson(url, renderIntensityDistribution);
             }
 
             function fetchPerformance(view) {
-                const url = '/api/graphs/performance?view=' + view;
+                const url = '/api/graphs/performance?view=' + view + graphQuery();
                 fetchJson(url, renderPerformanceRadar);
             }
 
             function fetchCaloriesBar(view) {
-                const url = '/api/graphs/calories_by_activity?view=' + view;
+                const url = '/api/graphs/calories_by_activity?view=' + view + graphQuery();
                 fetchJson(url, renderCaloriesBar);
             }
 
@@ -409,6 +512,27 @@
                 });
             });
 
+            activityTypeChecks.forEach(function(check) {
+                check.addEventListener('change', function() {
+                    saveActivityTypes();
+                    updateActivityFilterLabel();
+                    refreshActivityGraphs();
+                });
+            });
+            document.getElementById('selectAllActivities').addEventListener('click', function() {
+                activityTypeChecks.forEach(check => check.checked = true);
+                saveActivityTypes();
+                updateActivityFilterLabel();
+                refreshActivityGraphs();
+            });
+            document.getElementById('clearAllActivities').addEventListener('click', function() {
+                activityTypeChecks.forEach(check => check.checked = false);
+                saveActivityTypes();
+                updateActivityFilterLabel();
+                refreshActivityGraphs();
+            });
+            updateActivityFilterLabel();
+
     });
 
         
@@ -421,6 +545,26 @@
 <style>
     :root{ --accent: #dc3545; }
     .chart-container { background: #fff; border-radius:10px; padding:8px; }
+    .graph-header-actions { display:flex; align-items:center; gap:.45rem; }
+    .graph-expand-btn { display:inline-grid; width:30px; height:30px; padding:0; place-items:center; }
+    .graph-overlay { display:none; position:fixed; inset:0; z-index:1080; }
+    .graph-overlay.is-open { display:block; }
+    .graph-overlay-backdrop { position:absolute; inset:0; background:rgba(17,27,25,.72); backdrop-filter:blur(4px); }
+    .graph-overlay-panel { position:relative; display:flex; flex-direction:column; width:min(94vw,1500px); height:min(92vh,900px); margin:4vh auto; padding:1.25rem 1.5rem 1.5rem; border-radius:14px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .graph-overlay-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .graph-overlay-header h2 { margin:0; color:#27313d; font-size:1.25rem; }
+    .graph-overlay-close { display:grid; width:34px; height:34px; padding:0; place-items:center; border:1px solid #dee2e6; border-radius:7px; color:#495057; }
+    .graph-overlay-close:hover { background:#f1f3f5; color:#212529; }
+    .graph-overlay-stage { position:relative; flex:1; min-height:0; display:flex; align-items:stretch; justify-content:stretch; padding:.5rem; border-radius:9px; background:#fafbfc; }
+    .graph-overlay-stage canvas { width:100% !important; height:100% !important; }
+    body.graph-overlay-open { overflow:hidden; }
+    @media(max-width:600px){ .graph-overlay-panel { width:100vw; height:100vh; margin:0; border-radius:0; padding:1rem; } }
+    .activity-filter .dropdown-menu { min-width:220px; max-height:320px; overflow-y:auto; border-color:#dfe5e2; box-shadow:0 10px 24px rgba(25,50,40,.12); }
+    .activity-filter-actions { display:flex; justify-content:space-between; padding:.25rem .5rem .5rem; margin-bottom:.25rem; border-bottom:1px solid #edf0ee; }
+    .activity-option { display:flex; align-items:center; gap:.5rem; padding:.35rem .5rem; border-radius:6px; color:#3f5048; cursor:pointer; font-size:.82rem; }
+    .activity-option:hover { background:#f0f6f2; }
+    .activity-option .form-check-input { margin:0; }
+    .activity-swatch { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
     /* placeholder styling for when Chart.js isn't loaded */
     canvas { background: linear-gradient(180deg,#ffffff,#fbfbfb); }
 </style>

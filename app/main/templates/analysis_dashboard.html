@@ -30,18 +30,18 @@
 
     <div class="row g-3 mb-3">
         <div class="col-12 col-xl-8"><div class="card shadow-sm h-100"><div class="card-body">
-            <h5 class="card-title mb-1">Training load model</h5><div class="text-muted small mb-2">TSS, chronic load, acute load, and form</div>
+            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Training load model</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="load-trend-chart" data-graph-title="Training load model" aria-label="Expand Training load model" title="Expand graph"><i class="fas fa-expand"></i></button></div><div class="text-muted small mb-2">TSS, chronic load, acute load, and form</div>
             <div class="analysis-chart"><canvas id="load-trend-chart"></canvas></div>
         </div></div></div>
         <div class="col-12 col-xl-4"><div class="card shadow-sm h-100"><div class="card-body">
-            <h5 class="card-title mb-1">Intensity mix</h5><div class="text-muted small mb-2">Time spent at each effort level</div>
+            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Intensity mix</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensity-chart" data-graph-title="Intensity mix" aria-label="Expand Intensity mix" title="Expand graph"><i class="fas fa-expand"></i></button></div><div class="text-muted small mb-2">Time spent at each effort level</div>
             <div class="analysis-chart analysis-chart-short"><canvas id="intensity-chart"></canvas></div>
         </div></div></div>
     </div>
 
     <div class="row g-3 mb-3">
         <div class="col-12 col-lg-6"><div class="card shadow-sm h-100"><div class="card-body">
-            <h5 class="card-title mb-1">Heart-rate zones</h5><div class="text-muted small mb-2">Recorded time by zone</div>
+            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Heart-rate zones</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="zones-chart" data-graph-title="Heart-rate zones" aria-label="Expand Heart-rate zones" title="Expand graph"><i class="fas fa-expand"></i></button></div><div class="text-muted small mb-2">Recorded time by zone</div>
             <div class="analysis-chart analysis-chart-short"><canvas id="zones-chart"></canvas></div>
         </div></div></div>
         <div class="col-12 col-lg-6"><div class="card shadow-sm h-100"><div class="card-body">
@@ -59,6 +59,7 @@
         <div class="col-12 col-lg-4"><div class="analysis-detail"><span>Longest activity</span><strong id="record-longest">-</strong><small id="record-longest-detail">No activity recorded</small></div></div>
     </div>
 </div>
+<div class="graph-overlay" id="analysisGraphOverlay" aria-hidden="true"><div class="graph-overlay-backdrop" data-analysis-graph-close></div><section class="graph-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="analysisGraphOverlayTitle"><div class="graph-overlay-header"><h2 id="analysisGraphOverlayTitle"></h2><button class="btn graph-overlay-close" type="button" data-analysis-graph-close aria-label="Close expanded graph"><i class="fas fa-xmark"></i></button></div><div class="graph-overlay-stage" id="analysisGraphOverlayStage"></div></section></div>
 {% endblock %}
 
 {% block styles %}
@@ -72,6 +73,14 @@
     .analysis-detail { border-left: 3px solid #198754; }
     .analysis-chart { position: relative; height: 300px; }
     .analysis-chart-short { height: 230px; }
+    .analysis-chart-heading { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+    .graph-expand-btn { display:inline-grid; width:30px; height:30px; padding:0; place-items:center; }
+    .graph-overlay { display:none; position:fixed; inset:0; z-index:1080; }
+    .graph-overlay.is-open { display:block; }
+    .graph-overlay-backdrop { position:absolute; inset:0; background:rgba(17,27,25,.72); backdrop-filter:blur(4px); }
+    .graph-overlay-panel { position:relative; display:flex; flex-direction:column; width:min(94vw,1500px); height:min(92vh,900px); margin:4vh auto; padding:1.25rem 1.5rem 1.5rem; border-radius:14px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .graph-overlay-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }.graph-overlay-header h2 { margin:0; color:#27313d; font-size:1.25rem; }.graph-overlay-close { display:grid; width:34px; height:34px; padding:0; place-items:center; border:1px solid #dee2e6; border-radius:7px; color:#495057; }.graph-overlay-stage { position:relative; flex:1; min-height:0; display:flex; padding:.5rem; border-radius:9px; background:#fafbfc; }.graph-overlay-stage canvas { width:100% !important; height:100% !important; }body.graph-overlay-open { overflow:hidden; }
+    @media(max-width:600px){ .graph-overlay-panel { width:100vw; height:100vh; margin:0; border-radius:0; padding:1rem; } }
     .analysis-table th { color: #6c757d; font-size: .75rem; font-weight: 600; text-transform: uppercase; }
     .analysis-table td { font-size: .9rem; }
     .type-dot { display: inline-block; width: 9px; height: 9px; margin-right: .45rem; border-radius: 50%; }
@@ -84,6 +93,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const charts = {};
+    const graphOverlay = document.getElementById('analysisGraphOverlay');
+    const graphOverlayStage = document.getElementById('analysisGraphOverlayStage');
+    const graphOverlayTitle = document.getElementById('analysisGraphOverlayTitle');
+    let expandedCanvas = null;
+    let expandedCanvasParent = null;
+    let expandedCanvasNextSibling = null;
+    function closeAnalysisGraph() {
+        if (!expandedCanvas) return;
+        if (expandedCanvasNextSibling) expandedCanvasParent.insertBefore(expandedCanvas, expandedCanvasNextSibling); else expandedCanvasParent.appendChild(expandedCanvas);
+        expandedCanvas = null; expandedCanvasParent = null; expandedCanvasNextSibling = null;
+        graphOverlay.classList.remove('is-open'); graphOverlay.setAttribute('aria-hidden', 'true'); document.body.classList.remove('graph-overlay-open');
+    }
+    document.querySelectorAll('#analysisGraphOverlay ~ .graph-expand-btn, .analysis-page .graph-expand-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const canvas = document.getElementById(button.dataset.graphTarget); if (!canvas || expandedCanvas) return;
+            expandedCanvas = canvas; expandedCanvasParent = canvas.parentElement; expandedCanvasNextSibling = canvas.nextSibling;
+            graphOverlayTitle.textContent = button.dataset.graphTitle; graphOverlayStage.appendChild(canvas);
+            graphOverlay.classList.add('is-open'); graphOverlay.setAttribute('aria-hidden', 'false'); document.body.classList.add('graph-overlay-open');
+            window.setTimeout(function () { if (charts[button.dataset.graphTarget.replace('-chart', '')]) charts[button.dataset.graphTarget.replace('-chart', '')].resize(); }, 50);
+        });
+    });
+    document.querySelectorAll('[data-analysis-graph-close]').forEach(function (element) { element.addEventListener('click', closeAnalysisGraph); });
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeAnalysisGraph(); });
     const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
     const activityColors = {{ activity_colors|tojson }};
 

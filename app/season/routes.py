@@ -24,6 +24,10 @@ def season_home():
     training_season = get_or_create_season(athlete, season_year, current_user.id)
     today = date.today()
     current_phase = next((phase for phase in training_season.phases if phase.start_date <= today <= phase.end_date), None)
+    planning_end = max(
+        [date(season_year, 12, 31)]
+        + [objective.event_date for objective in training_season.objectives if objective.status == 'planned']
+    )
     week_start = today - timedelta(days=today.weekday())
     current_target = None
     actual = {'duration_minutes': 0, 'distance_km': 0, 'sessions': 0, 'sleep_hours': None, 'readiness': None}
@@ -57,6 +61,7 @@ def season_home():
         current_phase=current_phase,
         current_target=current_target,
         actual=actual,
+        planning_end=planning_end,
     )
 
 

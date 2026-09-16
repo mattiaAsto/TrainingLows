@@ -167,6 +167,9 @@ def verify_email_token(token):
 
     user.verified_email = True
     db.session.commit()
+    if current_user.is_authenticated and current_user.id == user.id:
+        flash('Your email has been verified successfully.', 'success')
+        return redirect(url_for('settings.settings_home'))
     flash('Your email has been verified successfully. You can now log in.', 'success')
     return redirect(url_for('auth.login'))
 
@@ -174,5 +177,5 @@ def verify_email_token(token):
 @auth.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('auth.login'))
+    return redirect(url_for('main.home'))
 

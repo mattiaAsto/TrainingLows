@@ -81,6 +81,11 @@
     .planner-actions .btn-outline-danger {
         border-width: 1.5px;
     }
+
+    .specific-data-section { margin-top: .5rem; padding: 1rem; border: 1px solid rgba(220, 53, 69, .14); border-radius: 12px; background: #fffafa; }
+    .specific-data-heading { margin-bottom: .9rem; color: #374151; font-weight: 700; }
+    .specific-data-heading span, .specific-data-heading small { display: block; }
+    .specific-data-heading small { margin-top: .2rem; color: #6b7280; font-weight: 400; font-size: .78rem; }
 </style>
 {% endblock %}
 
@@ -165,6 +170,11 @@
                                 <label class="form-label">Description</label>
                                 <textarea class="form-control" name="description" rows="3" placeholder="Extra notes, focus, or goals...">{{ entry.description if is_edit else '' }}</textarea>
                             </div>
+
+                            <div class="col-12 specific-data-section" id="specificDataSection" hidden>
+                                <div class="specific-data-heading"><div><span>Activity-specific data</span><small>Fields are defined by the activity catalog.</small></div></div>
+                                <div class="row g-3" id="specificDataFields"></div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 planner-actions">
@@ -185,4 +195,48 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const definitions = {{ activity_definitions|tojson }};
+    const activitySelect = document.querySelector('[name="activity_type"]');
+    const fieldsContainer = document.getElementById('specificDataFields');
+    const section = document.getElementById('specificDataSection');
+    const existing = {{ (entry.specific_data or {})|tojson if is_edit else '{}' }};
+
+    function renderSpecificFields() {
+        const fields = (definitions[activitySelect.value] || {}).specific_data || {};
+        fieldsContainer.innerHTML = '';
+        const names = Object.keys(fields);
+        section.hidden = names.length === 0;
+        names.forEach(function (name) {
+            const definition = fields[name];
+            const value = existing[name] == null ? '' : existing[name];
+            const wrapper = document.createElement('div');
+            wrapper.className = 'col-md-6';
+            const label = document.createElement('label');
+            label.className = 'form-label'; label.htmlFor = 'specific_' + name;
+            label.textContent = definition.label || name.replaceAll('_', ' ');
+            wrapper.appendChild(label);
+            let input;
+            if (definition.datatype === 'select') {
+                input = document.createElement('select'); input.className = 'form-select';
+                (definition.options || []).forEach(function (option) { const item = document.createElement('option'); item.value = option; item.textContent = option.replaceAll('_', ' '); item.selected = String(value) === option; input.appendChild(item); });
+            } else {
+                input = document.createElement('input'); input.className = 'form-control';
+                input.type = definition.datatype === 'integer' || definition.datatype === 'float' ? 'number' : definition.datatype === 'boolean' ? 'checkbox' : 'text';
+                if (input.type === 'number') { input.step = definition.datatype === 'float' ? '0.1' : '1'; if (definition.min != null) input.min = definition.min; if (definition.max != null) input.max = definition.max; }
+                if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = value;
+                if (definition.placeholder) input.placeholder = definition.placeholder;
+            }
+            input.name = 'specific_' + name; input.id = 'specific_' + name;
+            if (definition.required) input.required = true;
+            wrapper.appendChild(input);
+            if (definition.unit) { const hint = document.createElement('small'); hint.className = 'form-text text-muted'; hint.textContent = definition.unit; wrapper.appendChild(hint); }
+            fieldsContainer.appendChild(wrapper);
+        });
+    }
+    activitySelect.addEventListener('change', renderSpecificFields);
+    renderSpecificFields();
+});
+</script>
 {% endblock %}

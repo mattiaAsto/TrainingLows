@@ -29,6 +29,14 @@
                 <div class="col-md-8">
                     <h5>Notes</h5>
                     <p class="text-muted">{{ activity.description|default('No additional notes for this activity.') }}</p>
+                    {% if activity.specific_data %}
+                    <h5 class="mt-4">Activity-specific data</h5>
+                    <dl class="row mb-0">
+                        {% for field_name, value in activity.specific_data.items() %}
+                        <dt class="col-6 text-capitalize">{{ field_name|replace('_', ' ') }}</dt><dd class="col-6 text-end">{{ value }}</dd>
+                        {% endfor %}
+                    </dl>
+                    {% endif %}
                 </div>
             </div>
         </div>

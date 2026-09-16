@@ -103,6 +103,7 @@ def create_app():
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
     app.config['STRAVA_SYNC_ENABLED'] = os.getenv('STRAVA_SYNC_ENABLED', '1') == '1'
     app.config['PREFERRED_URL_SCHEME'] = os.getenv('PREFERRED_URL_SCHEME', 'http')
+    app.config['BUY_ME_A_COFFEE_URL'] = os.getenv('BUY_ME_A_COFFEE_URL', '').strip()
 
     #init Flask-Mail
     mail.init_app(app)
@@ -117,11 +118,25 @@ def create_app():
     cache.init_app(app)
 
     #init admin panel feature
-    #admin_panel.init_app(app)
+    from app.admin.routes import init_admin
+    init_admin(app)
 
     # Import tables as classes from the models.py file
-    #from app.admin.routes import UserOnlyView, AdminOnlyView, RunnerOnlyView, ArticleView, RunnerPointsView, UserRunnerView, LeagueView, LeagueDataView, UserLeagueView, TMOView
     from .models import User
+
+    @app.context_processor
+    def support_notification_context():
+        from flask_login import current_user
+        from .models import SupportThread
+        unread_count = 0
+        if current_user.is_authenticated:
+            threads = SupportThread.query.filter_by(user_id=current_user.id).all()
+            unread_count = sum(
+                1 for thread in threads
+                for message in thread.messages
+                if message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at)
+            )
+        return {'support_unread_count': unread_count}
 
     with app.app_context():
         try:
@@ -130,6 +145,25 @@ def create_app():
             if 'strava_auto_update' not in users_columns:
                 db.session.execute(text("ALTER TABLE Users ADD COLUMN strava_auto_update BOOLEAN NOT NULL DEFAULT 0"))
                 db.session.commit()
+            if 'activity_tint_enabled' not in users_columns:
+                db.session.execute(text("ALTER TABLE Users ADD COLUMN activity_tint_enabled BOOLEAN NOT NULL DEFAULT 1"))
+            athletes_columns = {column['name'] for column in inspect(db.engine).get_columns('Athletes')}
+            if 'self_reported_state' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_state VARCHAR(30) NOT NULL DEFAULT 'ready'"))
+            if 'self_reported_note' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_note TEXT NULL"))
+            if 'self_reported_at' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_at DATETIME NULL"))
+            planned_columns = {column['name'] for column in inspect(db.engine).get_columns('planned_activities')}
+            if 'specific_data' not in planned_columns:
+                db.session.execute(text("ALTER TABLE planned_activities ADD COLUMN specific_data JSON NULL"))
+            activity_columns = {column['name'] for column in inspect(db.engine).get_columns('Activities')}
+            if 'specific_data' not in activity_columns:
+                db.session.execute(text("ALTER TABLE Activities ADD COLUMN specific_data JSON NULL"))
+            support_thread_columns = {column['name'] for column in inspect(db.engine).get_columns('support_threads')}
+            if 'user_last_read_at' not in support_thread_columns:
+                db.session.execute(text("ALTER TABLE support_threads ADD COLUMN user_last_read_at DATETIME NULL"))
+            db.session.commit()
         except Exception:
             db.session.rollback()
             app.logger.exception('Could not initialize the Strava sync schema')

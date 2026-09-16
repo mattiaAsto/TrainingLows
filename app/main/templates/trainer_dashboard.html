@@ -6,18 +6,32 @@
 <div class="app-page-shell app-page-shell--wide trainer-dashboard">
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
         <div><div class="text-danger text-uppercase small fw-bold dashboard-eyebrow">Coaching workspace</div><h1 class="mb-1">Trainer dashboard</h1><p class="text-muted mb-0">{{ week_start|date_eu }} to {{ week_end|date_eu }} · {{ cards|length }} managed athlete{% if cards|length != 1 %}s{% endif %}</p></div>
-        <a class="btn btn-outline-secondary" href="{{ url_for('settings.settings_home') }}"><i class="fas fa-users-gear me-1"></i>Manage roster</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('settings.roster') }}"><i class="fas fa-users-gear me-1"></i>Manage roster</a>
     </div>
 
     {% if cards %}
-    <div class="row g-4">{% for card in cards %}<div class="col-12 col-xl-6"><article class="card athlete-card shadow-sm border-0 h-100 {% if card.needs_attention %}needs-attention{% endif %}"><div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div><div class="d-flex align-items-center gap-2"><h4 class="mb-0">{% if card.is_self %}Me{% else %}{{ card.athlete.user.first_name }} {{ card.athlete.user.last_name }}{% endif %}</h4>{% if card.is_self %}<span class="badge text-bg-light">Self</span>{% endif %}{% if card.needs_attention %}<span class="badge text-bg-warning">Needs attention</span>{% endif %}</div><div class="text-muted small mt-1">{{ card.athlete.sport or 'General athlete' }}</div></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.switch_athlete', athlete_id=card.athlete.id) }}">Manage</a></div>
+    <div class="dashboard-toolbar mb-3"><span class="text-muted small">Filter athletes</span><div class="btn-group btn-group-sm" role="group"><button class="btn btn-outline-secondary active" type="button" data-athlete-filter="all">All</button><button class="btn btn-outline-secondary" type="button" data-athlete-filter="attention">Needs attention</button><button class="btn btn-outline-secondary" type="button" data-athlete-filter="objective">Upcoming objective</button><button class="btn btn-outline-secondary" type="button" data-athlete-filter="compliance">Low compliance</button></div></div>
+    <div class="row g-4">{% for card in cards %}<div class="col-12 col-xl-6 athlete-card-column" data-attention="{{ 'true' if card.needs_attention else 'false' }}" data-objective="{{ 'true' if card.objective else 'false' }}" data-compliance="{{ 'true' if card.compliance is not none and card.compliance < 70 else 'false' }}"><article class="card athlete-card shadow-sm border-0 h-100 {% if card.needs_attention %}needs-attention{% endif %}"><div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div><div class="d-flex align-items-center gap-2"><h4 class="mb-0">{% if card.is_self %}Me{% else %}{{ card.athlete.user.first_name }} {{ card.athlete.user.last_name }}{% endif %}</h4>{% if card.is_self %}<span class="badge text-bg-light">Self</span>{% endif %}{% if card.needs_attention %}<span class="badge text-bg-warning">Needs attention</span>{% endif %}</div><div class="text-muted small mt-1">{{ card.athlete.sport or 'General athlete' }}{% if card.self_state != 'ready' %} · <span class="text-warning-emphasis">{{ card.self_state|replace('_', ' ')|title }}</span>{% endif %}</div></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('main.trainer_athlete_detail', athlete_id=card.athlete.id) }}">Manage</a></div>
         <div class="dashboard-phase mb-3" style="--phase-color:{{ card.phase.color if card.phase else '#adb5bd' }}"><span class="small text-muted">Current phase</span><strong>{{ card.phase.name if card.phase else 'No active phase' }}</strong>{% if card.phase %}<small>{{ card.phase.start_date|date_eu }} to {{ card.phase.end_date|date_eu }}</small>{% endif %}</div>
         <div class="row g-2 mb-3"><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Weekly TSS</span><strong>{{ card.tss }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Sessions</span><strong>{{ card.activities }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Readiness</span><strong>{{ card.readiness if card.readiness is not none else '-' }}</strong></div></div><div class="col-6 col-md-3"><div class="dashboard-metric"><span>Sleep</span><strong>{{ card.sleep if card.sleep is not none else '-' }}{% if card.sleep is not none %}h{% endif %}</strong></div></div></div>
-        <div class="d-flex justify-content-between align-items-center border-top pt-3"><div><div class="text-muted small">Next objective</div>{% if card.objective %}<strong>{{ card.objective.name }}</strong><div class="text-muted small">{{ card.objective.event_date|date_eu }} · {{ card.objective.priority }} priority</div>{% else %}<span class="text-muted">No upcoming objective</span>{% endif %}</div><div class="text-end"><div class="text-muted small">Next 7 days</div><strong>{{ card.planned|length }} planned</strong></div></div>
-        {% if card.recovery_status.alerts %}<div class="recovery-alerts mt-3">{% for alert in card.recovery_status.alerts %}<div><i class="fas fa-circle-exclamation me-1"></i>{{ alert }}</div>{% endfor %}</div>{% endif %}
+        <div class="d-flex justify-content-between align-items-start border-top pt-3 gap-3"><div><div class="text-muted small">Next objective</div>{% if card.objective %}<strong>{{ card.objective.name }}</strong><div class="text-muted small">{{ card.objective.event_date|date_eu }} · {{ card.objective.priority }} priority · {{ card.objective_days }} days</div>{% else %}<span class="text-muted">No upcoming objective</span>{% endif %}<div class="text-muted small mt-2">Previous week: {{ card.previous_completed }} / {{ card.previous_planned }} completed{% if card.compliance is not none %} · {{ card.compliance }}% compliance{% endif %}</div>{% if card.missed %}<div class="text-danger small mt-1">{{ card.missed|length }} missed planned session{% if card.missed|length != 1 %}s{% endif %}</div>{% endif %}</div><div class="text-end"><div class="text-muted small">Next 7 days</div><strong>{{ card.planned|length }} planned</strong></div></div>
+        {% if card.recovery_status.alerts %}<div class="recovery-alerts mt-3">{% for alert in card.recovery_status.alerts %}<div><i class="fas fa-circle-exclamation me-1"></i>{{ alert }}</div>{% endfor %}{% if card.self_note %}<div class="athlete-state-note mt-2"><i class="fas fa-comment-dots me-1"></i>{{ card.self_note }}</div>{% endif %}</div>{% endif %}
+        <div class="dashboard-links mt-3"><a href="{{ card.links.calendar }}">Calendar</a><a href="{{ card.links.planning }}">Planning</a><a href="{{ card.links.graphs }}">Graphs</a><a href="{{ card.links.analysis }}">Analysis</a></div>
+        <div class="row g-3 mt-1">
+            <div class="col-lg-7">
+                <div class="dashboard-detail-panel h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-2"><strong>{{ 'My' if card.is_self else card.athlete.user.first_name ~ ' ' ~ card.athlete.user.last_name ~ "'s" }} overview</strong><a class="small" href="{{ card.links.calendar }}">Browse calendar</a></div>
+                    <div class="row g-2 mb-3"><div class="col-4"><span class="detail-label">Distance</span><strong>{{ card.stats.total_distance }} km</strong></div><div class="col-4"><span class="detail-label">Sessions</span><strong>{{ card.stats.total_sessions }}</strong></div><div class="col-4"><span class="detail-label">Minutes</span><strong>{{ card.stats.total_minutes }}</strong></div></div>
+                    {% if card.recent_activities %}<div class="list-group list-group-flush small">{% for item in card.recent_activities[:4] %}<div class="list-group-item px-2 py-2 d-flex justify-content-between activity-list-item"{% if user.activity_tint_enabled %} style="--activity-color: {{ activity_colors.get(item.activity_type, '#6c757d') }};"{% endif %}><span><strong>{{ item.title }}</strong><br><span class="text-muted">{{ item.date|date_eu }} · {{ item.activity_type|capitalize }}</span></span><span class="text-end">{{ (item.distance_km or 0) }} km<br><small class="text-muted">{{ (item.duration_seconds or 0) // 60 }} min</small></span></div>{% endfor %}</div>{% else %}<span class="text-muted small">No recent activities yet.</span>{% endif %}
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="dashboard-detail-panel h-100"><div class="d-flex justify-content-between align-items-center mb-2"><strong>Planned sessions</strong><span class="dashboard-action-links"><a class="small" href="{{ card.links.planning }}">Plan season</a><a class="small" href="{{ card.links.session }}">Add session</a></span></div>{% if card.planned %}<div class="list-group list-group-flush small">{% for item in card.planned[:4] %}<div class="list-group-item px-2 py-2 activity-list-item"{% if user.activity_tint_enabled %} style="--activity-color: {{ activity_colors.get(item.activity_type, '#6c757d') }};"{% endif %}><div class="d-flex justify-content-between align-items-start"><span><strong>{{ item.title }}</strong><br><span class="text-muted">{{ item.activity_type|capitalize }} · {{ item.planned_date|date_eu(true) }}</span></span><form method="post" action="{{ url_for('planner.delete_entry', entry_type='planned', entry_id=item.id) }}"><button class="btn btn-link btn-sm text-danger p-0" type="submit">Delete</button></form></div></div>{% endfor %}</div>{% else %}<span class="text-muted small">No planned sessions yet.</span>{% endif %}</div>
+            </div>
+        </div>
     </div></article></div>{% endfor %}</div>
-    {% else %}<div class="empty-dashboard"><i class="fas fa-users-slash"></i><h3>No athletes to manage</h3><p>Invite an athlete from Settings to start coaching.</p><a class="btn btn-primary" href="{{ url_for('settings.settings_home') }}">Open settings</a></div>{% endif %}
+    {% else %}<div class="empty-dashboard"><i class="fas fa-users-slash"></i><h3>No athletes to manage</h3><p>Invite an athlete from the roster page to start coaching.</p><a class="btn btn-primary" href="{{ url_for('settings.roster') }}">Open roster</a></div>{% endif %}
 </div>
 {% endblock %}
 
@@ -36,4 +50,32 @@
     .recovery-alerts div + div { margin-top:.35rem; }
     .empty-dashboard { padding:5rem 1rem; text-align:center; border:1px dashed #ced4da; border-radius:12px; background:#fff; color:#6c757d; }
     .empty-dashboard i { margin-bottom:1rem; color:#adb5bd; font-size:2.5rem; }
+    .dashboard-toolbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.75rem 1rem; border:1px solid #e9ecef; border-radius:8px; background:#fff; }
+    .dashboard-links { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .dashboard-links a { padding:.3rem .6rem; border:1px solid #dee2e6; border-radius:5px; color:#495057; font-size:.78rem; text-decoration:none; }
+    .dashboard-links a:hover { border-color:#198754; color:#198754; }
+    .dashboard-action-links { display:flex; gap:.65rem; }
+    .activity-list-item { border-left:3px solid var(--activity-color); border-radius:6px; background:color-mix(in srgb, var(--activity-color) 10%, white); }
+    .athlete-state-note { padding-top:.45rem; border-top:1px solid rgba(102,77,3,.2); font-style:italic; }
+    .dashboard-detail-panel { margin-top:.25rem; padding:1rem; border:1px solid #edf0f2; border-radius:7px; background:#fff; }
+    .dashboard-detail-panel strong { color:#27313d; }
+    .dashboard-detail-panel a { color:#198754; text-decoration:none; }
+    .detail-label { display:block; color:#6c757d; font-size:.7rem; }
+    .dashboard-detail-panel .list-group-item { background:transparent; border-color:#edf0f2; }
+    @media(max-width:767px){ .dashboard-toolbar { align-items:flex-start; flex-direction:column; } }
 </style>{% endblock %}
+
+{% block scripts %}<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-athlete-filter]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            document.querySelectorAll('[data-athlete-filter]').forEach(function (item) { item.classList.remove('active'); });
+            button.classList.add('active');
+            const filter = button.dataset.athleteFilter;
+            document.querySelectorAll('.athlete-card-column').forEach(function (card) {
+                card.classList.toggle('d-none', filter !== 'all' && card.dataset[filter] !== 'true');
+            });
+        });
+    });
+});
+</script>{% endblock %}

@@ -19,17 +19,43 @@ import random
 
 
 
-app = create_app() 
+use_debug = True
+db_dropping = False
+
+if not use_debug and __name__ == '__main__':
+    print('Debug disabled. Start this module with: gunicorn --bind 0.0.0.0:$PORT wsgi:app')
+    raise SystemExit(0)
+
+if __name__ == '__main__' and os.getenv('APP_ENV', '').lower() == 'production':
+    raise RuntimeError('run.py is a destructive development seed script. Use production_update.py for production changes.')
+
+app = create_app()
+
+if __name__ == '__main__' and use_debug and not db_dropping:
+    print('Debug mode without database reset.')
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    app.run(host=os.getenv('HOST', '127.0.0.1'), port=int(os.getenv('PORT', 5500)), debug=False, use_reloader=False)
+    raise SystemExit(0)
 
 admin_password = str(os.getenv("ADMIN_PASSWORD", "1"))            
 hashed_password=bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
 
 admin = User(
-    first_name = "Admin",
-    last_name = "Admin",
+    first_name = "Trainer",
+    last_name = "Trainer",
     email = "1@admin.com",
     password = hashed_password,
-    verified_email = True
+    verified_email = True,
+    is_trainer = True,
+)
+admin2 = User(
+    first_name = "Athlete",
+    last_name = "Athlete",
+    email = "2@admin.com",
+    password = hashed_password,
+    verified_email = True,
+    is_athlete = True,
 )
 
 with app.app_context():
@@ -45,16 +71,25 @@ with app.app_context():
 
 
     db.session.add(admin)
+    db.session.add(admin2)
     db.session.commit()
 
     print("Admin added to database")
-    # create an Athlete profile for the admin user (if not present) and add a default activity dated today
+    # Keep the debug users' role flags and profiles consistent for local testing.
     try:
         if not Athlete.query.get(admin.id):
             athlete = Athlete(id=admin.id, sport='running', date_of_birth=None)
             db.session.add(athlete)
-            db.session.commit()
             print(f"Athlete profile created for admin (id={admin.id})")
+        if not Athlete.query.get(admin2.id):
+            athlete2 = Athlete(id=admin2.id, sport='running', date_of_birth=None)
+            db.session.add(athlete2)
+            print(f"Athlete profile created for athlete (id={admin2.id})")
+        if not Coach.query.get(admin.id):
+            coach = Coach(id=admin.id, specialization='General', bio='Debug trainer')
+            db.session.add(coach)
+            print(f"Coach profile created for admin (id={admin.id})")
+        db.session.commit()
     except Exception as e:
         print("Warning creating athlete profile:", e)
 
@@ -90,7 +125,7 @@ with app.app_context():
                 timez5 = duration - timez1 - timez2 - timez3 - timez4
 
                 if activity_type == "running":
-                    activity = Running(
+                    activity = get_activity_model('running')(
                         athlete_id=admin.id,
                         title=random.choice(running_titles),
                         duration_seconds=duration,
@@ -110,7 +145,7 @@ with app.app_context():
                     )
 
                 elif activity_type == "swimming":
-                    activity = Swimming(
+                    activity = get_activity_model('swimming')(
                         athlete_id=admin.id,
                         title=random.choice(swimming_titles),
                         duration_seconds=random.randint(1800, 5400),
@@ -131,7 +166,7 @@ with app.app_context():
                     )
 
                 elif activity_type == "cycling":
-                    activity = Cycling(
+                    activity = get_activity_model('cycling')(
                         athlete_id=admin.id,
                         title=random.choice(cycling_titles),
                         duration_seconds=duration,
@@ -152,7 +187,7 @@ with app.app_context():
                     )
 
                 elif activity_type == "strength":
-                    activity = Strenght(
+                    activity = get_activity_model('strength')(
                         athlete_id=admin.id,
                         title=random.choice(strength_titles),
                         duration_seconds=random.randint(1800, 5400),
@@ -252,6 +287,10 @@ host = os.getenv("HOST", "127.0.0.1")
 port = int(os.getenv("PORT", 5500))
 
 if __name__ == '__main__':
+    if not use_debug:
+        print('Debug disabled. Start this module with: gunicorn --bind 0.0.0.0:$PORT wsgi:app')
+        raise SystemExit(0)
+
     print("Refreshed...")
 
     if system == 1:

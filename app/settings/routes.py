@@ -4,9 +4,20 @@ from flask_mail import Message
 from flask_login import current_user
 
 from app import db, mail
+from app.activity_catalog import ACTIVITY_COLORS
 from app.athlete_context import athlete_is_visible, managed_athletes as get_roster_for_current_user, selected_athlete as get_selected_athlete
 from app.models import Activity, Athlete, Coach, PendingInvite, PlannedActivity, StravaActivity, User
 from . import settings
+
+
+ATHLETE_STATES = {
+    'ready': 'Ready to train',
+    'normal': 'Feeling normal',
+    'fatigued': 'Fatigued',
+    'rest': 'Need extra rest',
+    'sick': 'Sick',
+    'injured': 'Injured',
+}
 
 
 def _decode_invite_token(token, salt_name='settings-link-token'):
@@ -43,6 +54,32 @@ def _send_invitation_email(recipient, recipient_name, sender_name, invite_url, i
         return True
     except Exception:
         current_app.logger.exception('Could not send TrainingLows invitation email')
+        return False
+
+
+def _send_verification_email(user):
+    token = current_app.url_serializer.dumps({'email': user.email}, salt='email-verification')
+    verification_url = url_for('auth.verify_email_token', token=token, _external=True)
+
+    if not current_app.config.get('MAIL_SERVER') or not current_app.config.get('MAIL_DEFAULT_SENDER'):
+        flash(f'Verification link: {verification_url}', 'info')
+        return True
+
+    message = Message(
+        subject='Verify your TrainingLows email address',
+        recipients=[user.email],
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+        body=(
+            f'Hi {user.first_name},\n\n'
+            f'Please verify your email address by opening this link:\n{verification_url}\n\n'
+            'If you did not request this change, you can ignore this email.'
+        ),
+    )
+    try:
+        mail.send(message)
+        return True
+    except Exception:
+        current_app.logger.exception('Could not send TrainingLows verification email')
         return False
 
 
@@ -94,6 +131,18 @@ def get_pending_strava_for_current_user():
     return StravaActivity.query.filter_by(user_id=current_user.id, status='pending').order_by(StravaActivity.started_at.desc()).limit(5).all()
 
 
+def get_trainer_link_context(athlete):
+    if athlete is None:
+        return [], []
+    linked_trainers = list(athlete.coaches)
+    pending_invites = PendingInvite.query.filter_by(
+        from_user_id=athlete.user.id,
+        kind='trainer_link',
+        status='pending',
+    ).order_by(PendingInvite.created_at.desc()).all()
+    return linked_trainers, pending_invites
+
+
 def get_athlete_overview_context(athlete):
     recent_activities = Activity.query.filter_by(athlete_id=athlete.id).order_by(Activity.date.desc()).limit(8).all()
     planned_activities = PlannedActivity.query.filter_by(athlete_id=athlete.id).order_by(PlannedActivity.planned_date.asc()).limit(10).all()
@@ -117,6 +166,7 @@ def inject_settings_context():
         'available_athletes': get_roster_for_current_user(),
         'pending_invites': get_pending_invites_for_current_user(),
         'pending_strava_activities': get_pending_strava_for_current_user(),
+        'activity_colors': ACTIVITY_COLORS,
     }
 
 
@@ -126,25 +176,110 @@ def settings_home():
         _ensure_trainer_profile_for_user(current_user)
         db.session.commit()
     athlete = get_selected_athlete()
-    roster = get_roster_for_current_user()
-
     pending_invites = get_pending_invites_for_current_user()
     pending_strava_activities = get_pending_strava_for_current_user()
-
-    if athlete is None:
-        flash('Create an athlete profile first before managing calendars.', 'info')
-        return render_template('settings.html', athlete=None, roster=[], recent_activities=[], planned_activities=[], stats={}, pending_invites=pending_invites, pending_strava_activities=pending_strava_activities)
-
-    overview = get_athlete_overview_context(athlete)
+    linked_trainers, outgoing_trainer_invites = get_trainer_link_context(current_user.athlete_profile)
 
     return render_template(
-        'settings.html',
+        'account_settings.html',
         athlete=athlete,
-        roster=roster,
-        **overview,
         pending_invites=pending_invites,
         pending_strava_activities=pending_strava_activities,
+        linked_trainers=linked_trainers,
+        outgoing_trainer_invites=outgoing_trainer_invites,
     )
+
+
+@settings.route('/roster')
+def roster():
+    if current_user.is_trainer and current_user.coach_profile is None:
+        _ensure_trainer_profile_for_user(current_user)
+        db.session.commit()
+    return render_template(
+        'roster.html',
+        athlete=get_selected_athlete(),
+        roster=get_roster_for_current_user(),
+        pending_invites=get_pending_invites_for_current_user(),
+        linked_trainers=list(current_user.athlete_profile.coaches) if current_user.athlete_profile else [],
+        outgoing_trainer_invites=get_trainer_link_context(current_user.athlete_profile)[1],
+        athlete_states=ATHLETE_STATES,
+    )
+
+
+@settings.route('/athlete/state', methods=['POST'])
+def update_athlete_state():
+    if not current_user.is_athlete:
+        abort(403)
+    athlete = _ensure_athlete_profile_for_user(current_user)
+    state = (request.form.get('state') or '').strip().lower()
+    if state not in ATHLETE_STATES:
+        flash('Please choose a valid training state.', 'warning')
+        return redirect(url_for('settings.roster'))
+    athlete.self_reported_state = state
+    athlete.self_reported_note = (request.form.get('note') or '').strip()[:500] or None
+    athlete.self_reported_at = datetime.now()
+    db.session.commit()
+    flash('Your training state was updated.', 'success')
+    return redirect(url_for('settings.roster'))
+
+
+@settings.route('/profile/update', methods=['POST'])
+def update_profile():
+    first_name = (request.form.get('first_name') or '').strip()
+    last_name = (request.form.get('last_name') or '').strip()
+    email = (request.form.get('email') or '').strip().lower()
+
+    if not first_name or not last_name or not email:
+        flash('First name, last name, and email are required.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
+    existing_user = User.query.filter(User.email == email, User.id != current_user.id).first()
+    if existing_user:
+        flash('That email address is already in use.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
+    email_changed = email != current_user.email.lower()
+    current_user.first_name = first_name
+    current_user.last_name = last_name
+    current_user.email = email
+    current_user.activity_tint_enabled = request.form.get('activity_tint_enabled') == 'on'
+
+    athlete_profile = current_user.athlete_profile
+    if athlete_profile is not None:
+        athlete_profile.sport = (request.form.get('sport') or '').strip() or athlete_profile.sport
+        birth_date = (request.form.get('date_of_birth') or '').strip()
+        if birth_date:
+            try:
+                athlete_profile.date_of_birth = datetime.strptime(birth_date, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Please provide a valid date of birth.', 'warning')
+                return redirect(url_for('settings.settings_home'))
+
+    if email_changed:
+        current_user.verified_email = False
+    db.session.commit()
+
+    if email_changed:
+        sent = _send_verification_email(current_user)
+        flash(
+            'Your email was changed. Verify the new address to restore full account access.' if sent
+            else 'Your email was changed, but the verification email could not be sent.',
+            'warning',
+        )
+    else:
+        flash('Personal data updated.', 'success')
+    return redirect(url_for('settings.settings_home'))
+
+
+@settings.route('/profile/send-verification', methods=['POST'])
+def send_verification():
+    if current_user.verified_email:
+        flash('Your email address is already verified.', 'info')
+        return redirect(url_for('settings.settings_home'))
+
+    _send_verification_email(current_user)
+    flash('A new verification email has been sent.', 'success')
+    return redirect(url_for('settings.settings_home'))
 
 
 @settings.route('/athlete/select/<int:athlete_id>')
@@ -155,27 +290,52 @@ def switch_athlete(athlete_id):
 
     session['selected_athlete_id'] = athlete.id
     flash(f'Now managing {athlete.user.first_name} {athlete.user.last_name}.', 'success')
+    destination = {
+        'calendar': 'main.calendar',
+        'graphs': 'main.graphs',
+        'analysis': 'main.analysis',
+        'planning': 'season.season_home',
+        'session': 'planner.add_entry',
+    }.get(request.args.get('next'))
+    if destination:
+        return redirect(url_for(destination))
     return redirect(url_for('settings.settings_home'))
 
 
 @settings.route('/invite/trainer', methods=['POST'])
 def invite_trainer():
-    if not current_user.is_athlete or current_user.athlete_profile is None:
+    if not current_user.is_athlete:
         abort(403)
+    athlete_profile = _ensure_athlete_profile_for_user(current_user)
+    db.session.commit()
 
     trainer_email = (request.form.get('trainer_email', '') or '').strip().lower()
     if not trainer_email:
         flash('Please enter the trainer email.', 'warning')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
 
     trainer = User.query.filter_by(email=trainer_email).first()
     if trainer is None or (not trainer.is_trainer and trainer.coach_profile is None):
         flash('That account is not registered as a trainer yet.', 'warning')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
+
+    if trainer.id in {coach.id for coach in current_user.athlete_profile.coaches}:
+        flash(f'{trainer.first_name} {trainer.last_name} is already linked as your trainer.', 'info')
+        return redirect(url_for('settings.roster'))
+
+    existing_invite = PendingInvite.query.filter_by(
+        from_user_id=current_user.id,
+        to_user_id=trainer.id,
+        kind='trainer_link',
+        status='pending',
+    ).first()
+    if existing_invite:
+        flash(f'An invitation to {trainer.first_name} {trainer.last_name} is already pending.', 'info')
+        return redirect(url_for('settings.roster'))
 
     payload = {
         'kind': 'trainer_link',
-        'athlete_id': current_user.athlete_profile.id,
+        'athlete_id': athlete_profile.id,
         'trainer_id': trainer.id,
     }
     token = _encode_invite_token(payload)
@@ -204,7 +364,7 @@ def invite_trainer():
         f'Invitation email sent to {trainer.email}.' if sent else 'The invitation was created, but the email could not be sent. Check your mail configuration.',
         'success' if sent else 'warning',
     )
-    return redirect(url_for('settings.settings_home'))
+    return redirect(url_for('settings.roster'))
 
 
 @settings.route('/invite/athlete', methods=['POST'])
@@ -219,18 +379,29 @@ def invite_athlete():
     birthdate_value = (request.form.get('date_of_birth', '') or '').strip()
     if not athlete_email:
         flash('Please enter the athlete email.', 'warning')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
+    if not birthdate_value:
+        flash('The athlete birthdate is required to confirm the collaboration request.', 'warning')
+        return redirect(url_for('settings.roster'))
 
     try:
-        requested_birthdate = datetime.strptime(birthdate_value, '%Y-%m-%d').date() if birthdate_value else None
+        requested_birthdate = datetime.strptime(birthdate_value, '%Y-%m-%d').date()
     except ValueError:
         flash('Please provide a valid athlete birthdate.', 'warning')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
 
     athlete_user = User.query.filter_by(email=athlete_email).first()
     if athlete_user is None or (not athlete_user.is_athlete and athlete_user.athlete_profile is None):
         flash('That account is not registered as an athlete yet.', 'warning')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
+
+    athlete_profile = athlete_user.athlete_profile
+    if athlete_profile is None or athlete_profile.date_of_birth is None:
+        flash('That athlete does not have a birthdate on their profile, so the invitation cannot be verified.', 'warning')
+        return redirect(url_for('settings.roster'))
+    if athlete_profile.date_of_birth != requested_birthdate:
+        flash('The email and birthdate do not match the athlete profile. No invitation was sent.', 'warning')
+        return redirect(url_for('settings.roster'))
 
     payload = {
         'kind': 'athlete_link',
@@ -264,7 +435,7 @@ def invite_athlete():
         f'Invitation email sent to {athlete_user.email}.' if sent else 'The invitation was created, but the email could not be sent. Check your mail configuration.',
         'success' if sent else 'warning',
     )
-    return redirect(url_for('settings.settings_home'))
+    return redirect(url_for('settings.roster'))
 
 
 @settings.route('/confirm/trainer/<token>', methods=['GET', 'POST'])
@@ -393,12 +564,12 @@ def add_athlete():
 
         if not email:
             flash('Please provide an athlete email.', 'warning')
-            return redirect(url_for('settings.settings_home'))
+            return redirect(url_for('settings.roster'))
 
         user = User.query.filter_by(email=email).first()
         if user is None:
             flash('No account was found for that email. Ask the athlete to register first.', 'warning')
-            return redirect(url_for('settings.settings_home'))
+            return redirect(url_for('settings.roster'))
 
         athlete = user.athlete_profile
         if athlete is None:
@@ -417,7 +588,7 @@ def add_athlete():
         db.session.commit()
         session['selected_athlete_id'] = athlete.id
         flash(f'{user.first_name} {user.last_name} is now linked as an athlete.', 'success')
-        return redirect(url_for('settings.settings_home'))
+        return redirect(url_for('settings.roster'))
 
     return redirect(url_for('settings.settings_home'))
 

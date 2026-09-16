@@ -63,6 +63,7 @@ db.sqlite3-journal
 
 # Flask stuff:
 instance/
+backups/
 .webassets-cache
 
 # Scrapy stuff:
@@ -150,6 +151,7 @@ activemq-data/
 # Environments
 .env
 .envrc
+render.env
 .venv
 env/
 venv/

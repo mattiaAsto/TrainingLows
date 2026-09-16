@@ -20,7 +20,7 @@
             <div class="card shadow-sm border-0 mt-4"><div class="card-body"><h5 class="mb-2">Manual phase</h5><form method="post" action="{{ url_for('season.create_phase') }}"><input type="hidden" name="season_year" value="{{ season_year }}"><div class="mb-2"><input class="form-control" name="name" placeholder="Base endurance block" required></div><div class="row g-2 mb-2"><div class="col-6"><input class="form-control" type="date" name="start_date" required></div><div class="col-6"><input class="form-control" type="date" name="end_date" required></div></div><button class="btn btn-outline-secondary w-100" type="submit">Add phase</button></form></div></div>
         </aside>
 
-        <main class="col-12 col-xl-8"><div class="card shadow-sm border-0"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-4"><div><h5 class="mb-1">Season timeline</h5><p class="text-muted small mb-0">January through December</p></div><span class="badge text-bg-light">Live shared view</span></div><div class="season-axis"><span>Jan</span><span>Mar</span><span>Jun</span><span>Sep</span><span>Dec</span></div>{% for phase in phases %}<div class="phase-row"><div class="phase-label"><span class="phase-dot" style="background:{{ phase.color }}"></span><strong>{{ phase.name }}</strong><small>{{ phase.start_date|date_eu }} to {{ phase.end_date|date_eu }}</small></div><div class="phase-bar" style="--phase-color:{{ phase.color }}"><span>{{ phase.phase_type|replace('_', ' ')|title }}</span></div><a class="btn btn-sm btn-link" href="{{ url_for('season.edit_phase', phase_id=phase.id) }}">Edit</a></div>{% else %}<div class="empty-timeline">Add an objective, then generate a draft timeline.</div>{% endfor %}</div></div></main>
+        <main class="col-12 col-xl-8"><div class="card shadow-sm border-0"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-4"><div><h5 class="mb-1">Season timeline</h5><p class="text-muted small mb-0">January {{ season_year }} through {{ planning_end|date_eu }}</p></div><span class="badge text-bg-light">Live shared view</span></div><div class="season-axis"><span>Jan</span><span>Mar</span><span>Jun</span><span>Sep</span><span>{{ planning_end.strftime('%b') }}</span></div>{% for phase in phases %}<div class="phase-row"><div class="phase-label"><span class="phase-dot" style="background:{{ phase.color }}"></span><strong>{{ phase.name }}</strong><small>{{ phase.start_date|date_eu }} to {{ phase.end_date|date_eu }}</small></div><div class="phase-bar" style="--phase-color:{{ phase.color }}"><span>{{ phase.phase_type|replace('_', ' ')|title }}</span></div><a class="btn btn-sm btn-link" href="{{ url_for('season.edit_phase', phase_id=phase.id) }}">Edit</a></div>{% else %}<div class="empty-timeline">Add an objective, then generate a draft timeline.</div>{% endfor %}</div></div></main>
     </div>
 </div>
 
@@ -42,6 +42,11 @@
     .progress-metric { padding:.8rem; border:1px solid #edf0f2; border-radius:8px; background:#fafbfc; }
     .progress-metric span, .progress-metric small { display:block; color:#6c757d; font-size:.75rem; }
     .progress-metric strong { display:block; margin:.2rem 0; color:#27313d; font-size:1.2rem; }
+    #objective-modal .modal-dialog { height:calc(100vh - 2rem); max-height:calc(100vh - 2rem); margin:1rem auto; }
+    #objective-modal .modal-content { height:100%; max-height:100%; display:flex; }
+    #objective-modal form { display:flex; flex:1 1 auto; min-height:0; flex-direction:column; }
+    #objective-modal .modal-body { flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto; }
+    #objective-modal .modal-footer { flex:0 0 auto; background:#fff; border-top:1px solid #e9ecef; }
     @media(max-width:767px){ .season-axis { margin-left:0; } .phase-row { display:block; padding:1rem 0; } .phase-label { width:auto; margin-bottom:.5rem; } }
 </style>{% endblock %}
 

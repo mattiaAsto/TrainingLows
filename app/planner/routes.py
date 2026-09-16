@@ -4,13 +4,54 @@ from flask_login import current_user
 
 from app import db
 from app.athlete_context import selected_athlete as get_current_athlete
-from app.activity_catalog import ACTIVITY_DEFINITIONS, ACTIVITY_LABELS, ACTIVITY_UNITS
+from app.activity_catalog import ACTIVITY_DEFINITIONS, ACTIVITY_LABELS, ACTIVITY_UNITS, activity_specific_fields
 from app.models import Activity, PlannedActivity, get_activity_model
 
 from . import planner
 
 
 ACTIVITY_TYPE_MAP = {activity_type: get_activity_model(activity_type) for activity_type in ACTIVITY_DEFINITIONS}
+
+
+def collect_specific_data(activity_type, form):
+    data = {}
+    for field_name, definition in activity_specific_fields(activity_type).items():
+        raw_value = (form.get(f'specific_{field_name}') or '').strip()
+        if not raw_value:
+            if definition.get('required'):
+                raise ValueError(f"{definition.get('label', field_name)} is required.")
+            continue
+        datatype = definition.get('datatype', 'text')
+        try:
+            if datatype == 'integer':
+                value = int(raw_value)
+            elif datatype == 'float':
+                value = float(raw_value)
+            elif datatype == 'boolean':
+                value = raw_value.lower() in {'1', 'true', 'yes', 'on'}
+            elif datatype == 'select':
+                if raw_value not in definition.get('options', []):
+                    raise ValueError
+                value = raw_value
+            else:
+                value = raw_value
+        except (TypeError, ValueError):
+            raise ValueError(f"{definition.get('label', field_name)} has an invalid value.")
+        minimum = definition.get('min')
+        maximum = definition.get('max')
+        if (minimum is not None and value < minimum) or (maximum is not None and value > maximum):
+            raise ValueError(f"{definition.get('label', field_name)} is outside the allowed range.")
+        data[field_name] = value
+    return data
+
+
+def apply_specific_data(activity, data):
+    activity.specific_data = data or None
+    legacy_names = {'strength_type': 'strenght_type'}
+    for field_name, value in data.items():
+        attribute_name = legacy_names.get(field_name, field_name)
+        if hasattr(activity, attribute_name):
+            setattr(activity, attribute_name, value)
 
 
 @planner.context_processor
@@ -42,6 +83,11 @@ def add_entry():
         distance_km = float(request.form.get('distance_km', 0) or 0)
         intensity = request.form.get('intensity', 'moderate')
         description = request.form.get('description', '').strip()
+        try:
+            specific_data = collect_specific_data(activity_type, request.form)
+        except ValueError as error:
+            flash(str(error), 'error')
+            return render_template('planner_form.html', default_date=default_date, athlete=athlete, entry_type=entry_type, entry={}, is_edit=False)
 
         try:
             scheduled_dt = datetime.strptime(f"{date_value} {start_time}", '%Y-%m-%d %H:%M')
@@ -75,6 +121,7 @@ def add_entry():
                 session_activity.terrain = request.form.get('terrain', 'road')
             elif activity_type == 'strength':
                 session_activity.strenght_type = request.form.get('strength_type', 'general')
+            apply_specific_data(session_activity, specific_data)
 
             db.session.add(session_activity)
             flash('Completed activity saved.', 'success')
@@ -88,6 +135,7 @@ def add_entry():
                 distance_km=distance_km if ACTIVITY_UNITS.get(activity_type) == 'km' else 0,
                 intensity=intensity,
                 description=description or f"Planned {activity_type} session",
+                specific_data=specific_data or None,
             )
             db.session.add(planned)
             flash('Planned activity added.', 'success')
@@ -122,6 +170,15 @@ def edit_entry(entry_type, entry_id):
         entry.activity_type = request.form.get('activity_type', entry.activity_type)
         entry.intensity = request.form.get('intensity', entry.intensity)
         entry.description = request.form.get('description', '').strip() or entry.description
+        try:
+            specific_data = collect_specific_data(entry.activity_type, request.form)
+        except ValueError as error:
+            flash(str(error), 'error')
+            return render_template('planner_form.html', entry=entry, entry_type=entry_type, athlete=athlete, is_edit=True)
+        if entry_type == 'done':
+            apply_specific_data(entry, specific_data)
+        else:
+            entry.specific_data = specific_data or None
 
         date_value = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
         start_time = request.form.get('time', '08:00')
@@ -202,6 +259,7 @@ def api_calendar_entries():
             'distance_km': row.distance_km or 0,
             'intensity': row.intensity,
             'description': row.description or '',
+            'specific_data': row.specific_data or {},
         })
 
     for row in planned_entries:
@@ -215,6 +273,7 @@ def api_calendar_entries():
             'distance_km': row.distance_km or 0,
             'intensity': row.intensity,
             'description': row.description or '',
+            'specific_data': row.specific_data or {},
         })
 
     return jsonify({'entries': sorted(items, key=lambda x: x['date'])})

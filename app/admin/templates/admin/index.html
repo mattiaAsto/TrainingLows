@@ -1,0 +1,32 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid py-4 admin-overview">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+            <div class="admin-kicker">System control</div>
+            <h1 class="mb-1">TrainingLows administration</h1>
+            <p class="text-muted mb-0">Manage accounts, relationships, training data, planning, recovery, and integrations.</p>
+        </div>
+        <div class="admin-identity"><i class="fas fa-shield-halved me-2"></i>{{ admin_email }}</div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Accounts</span><strong>{{ counts|selectattr('label', 'equalto', 'User')|map(attribute='count')|first }}</strong><small>registered users</small></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Athletes</span><strong>{{ counts|selectattr('label', 'equalto', 'Athlete')|map(attribute='count')|first }}</strong><small>athlete profiles</small></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Activities</span><strong>{{ counts|selectattr('label', 'equalto', 'Activity')|map(attribute='count')|first }}</strong><small>completed sessions</small></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Invitations</span><strong>{{ counts|selectattr('label', 'equalto', 'PendingInvite')|map(attribute='count')|first }}</strong><small>connection records</small></div></div>
+    </div>
+
+    <section class="admin-panel mb-4">
+        <div class="panel-heading"><div><div class="admin-kicker">Database map</div><h2>Managed tables</h2></div><span class="text-muted small">{{ counts|length }} tables</span></div>
+        <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Table model</th><th class="text-end">Records</th><th class="text-end">Action</th></tr></thead><tbody>{% for item in counts %}<tr><td><strong>{{ item.label }}</strong></td><td class="text-end">{{ item.count }}</td><td class="text-end">{% if item.endpoint %}<a class="btn btn-sm btn-outline-danger" href="{{ url_for(item.endpoint + '.index_view') }}">Open</a>{% else %}<span class="text-muted">Unavailable</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+
+    <section class="admin-panel"><div class="panel-heading"><div><div class="admin-kicker">Catalog</div><h2>Activity types</h2></div><span class="text-muted small">JSON-driven</span></div><div class="type-cloud">{% for activity_type in activity_types %}<span>{{ activity_type|replace('_', ' ')|title }}</span>{% endfor %}</div></section>
+</div>
+{% endblock %}
+
+{% block head %}{{ super() }}<style>
+.admin-overview { max-width:1500px; margin:0 auto; color:#27313d; }.admin-kicker { color:#dc3545; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }.admin-overview h1 { font-weight:700; letter-spacing:-.035em; }.admin-identity { padding:.55rem .8rem; border:1px solid #f0dfe1; border-radius:8px; color:#b02a37; background:#fffafa; font-size:.82rem; }.stat-card { height:100%; padding:1.1rem 1.2rem; border:1px solid #e9ecef; border-top:3px solid #dc3545; border-radius:9px; background:#fff; box-shadow:0 4px 14px rgba(20,20,20,.04); }.stat-card span,.stat-card small { display:block; color:#6c757d; font-size:.78rem; }.stat-card strong { display:block; margin:.35rem 0; color:#27313d; font-size:1.8rem; }.admin-panel { padding:1.25rem; border:1px solid #e9ecef; border-radius:10px; background:#fff; box-shadow:0 4px 14px rgba(20,20,20,.04); }.panel-heading { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; }.panel-heading h2 { margin:.15rem 0 0; font-size:1.25rem; }.admin-panel table th { color:#6c757d; font-size:.75rem; font-weight:700; text-transform:uppercase; }.admin-panel table td { border-color:#f0f2f3; }.type-cloud { display:flex; flex-wrap:wrap; gap:.5rem; }.type-cloud span { padding:.4rem .65rem; border:1px solid #f0dfe1; border-radius:999px; background:#fffafa; color:#b02a37; font-size:.8rem; }
+</style>{% endblock %}

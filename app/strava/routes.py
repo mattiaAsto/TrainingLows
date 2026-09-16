@@ -7,6 +7,7 @@ from . import strava
 from app import db
 from app.models import get_activity_model
 from app.models import *
+from app.activity_catalog import ACTIVITY_COLORS
 from app.strava.auth import build_authorization_url, exchange_code, get_valid_token
 from app.strava import client as strava_client
 
@@ -322,5 +323,6 @@ def settings():
         connected=connected,
         athlete=athlete,
         auto_update=current_user.strava_auto_update if current_user.is_authenticated else False,
+        activity_colors=ACTIVITY_COLORS,
         pending_activities=StravaActivity.query.filter_by(user_id=current_user.id, status='pending').order_by(StravaActivity.started_at.desc()).all() if current_user.is_authenticated else [],
     )

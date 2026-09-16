@@ -1,7 +1,7 @@
 from app import db
 from app.activity_catalog import ACTIVITY_DEFINITIONS, ACTIVITY_TYPES
 from flask_login import UserMixin
-from sqlalchemy.types import LargeBinary
+from sqlalchemy.types import LargeBinary, JSON
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import time
@@ -88,6 +88,7 @@ class User(UserMixin, db.Model):
     is_trainer = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
     strava_athlete_id = db.Column(db.BigInteger, nullable=True, unique=True)
     strava_auto_update = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    activity_tint_enabled = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
 
     athlete_profile = db.relationship("Athlete", back_populates="user", uselist=False, cascade="all, delete-orphan")
     coach_profile = db.relationship("Coach", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -103,6 +104,9 @@ class Athlete(db.Model):
     id = db.Column(db.Integer, db.ForeignKey("Users.id", ondelete="CASCADE"), primary_key=True)
     sport = db.Column(db.String(50), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
+    self_reported_state = db.Column(db.String(30), nullable=False, default='ready', server_default='ready')
+    self_reported_note = db.Column(db.Text, nullable=True)
+    self_reported_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship("User", back_populates="athlete_profile")
     coaches = db.relationship("Coach", secondary=CoachAthlete, back_populates="athletes")
@@ -135,6 +139,38 @@ class PendingInvite(db.Model):
     to_user = db.relationship("User", foreign_keys=[to_user_id], backref="received_invites")
 
 
+class SupportThread(db.Model):
+    __tablename__ = 'support_threads'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('Users.id', ondelete='SET NULL'), nullable=True, index=True)
+    requester_email = db.Column(db.String(120), nullable=False, index=True)
+    subject = db.Column(db.String(160), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='open', index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo('Europe/Zurich')))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo('Europe/Zurich')), onupdate=lambda: datetime.now(ZoneInfo('Europe/Zurich')))
+    closed_at = db.Column(db.DateTime, nullable=True)
+    user_last_read_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('support_threads', cascade='all, delete-orphan'))
+    messages = db.relationship('SupportMessage', back_populates='thread', cascade='all, delete-orphan', order_by='SupportMessage.created_at.asc()')
+
+
+class SupportMessage(db.Model):
+    __tablename__ = 'support_messages'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    thread_id = db.Column(db.Integer, db.ForeignKey('support_threads.id', ondelete='CASCADE'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('Users.id', ondelete='SET NULL'), nullable=True, index=True)
+    author_email = db.Column(db.String(120), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo('Europe/Zurich')))
+
+    thread = db.relationship('SupportThread', back_populates='messages')
+    author = db.relationship('User', backref='support_messages')
+
+
 class PlannedActivity(db.Model):
     """Weekly training program for a given athlete, used for planned-vs-done comparisons."""
     __tablename__ = "planned_activities"
@@ -148,6 +184,7 @@ class PlannedActivity(db.Model):
     distance_km = db.Column(db.Float, nullable=True, default=0)
     intensity = db.Column(db.String(20), nullable=False, default="moderate")
     description = db.Column(db.Text, nullable=True)
+    specific_data = db.Column(JSON, nullable=True, default=dict)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Europe/Zurich")))
     updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Europe/Zurich")), onupdate=lambda: datetime.now(ZoneInfo("Europe/Zurich")))
 
@@ -338,6 +375,7 @@ class Activity(db.Model):
     timez4_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 4 (seconds)
     timez5_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 5 (seconds)
     description = db.Column(db.Text, nullable=True)
+    specific_data = db.Column(JSON, nullable=True, default=dict)
     date = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo("Europe/Zurich")), index=True)
 
     # Optional sport-specific fields live on the shared activity table so every
