@@ -10,7 +10,7 @@ app = create_app()
 
 with app.app_context():
 
-    admin_password = 1
+    admin_password = "1"
     hashed_password=bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
 
     admin = User(
