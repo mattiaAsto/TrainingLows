@@ -22,14 +22,19 @@ with app.app_context():
     is_trainer = True,
     )
 
-    meta = MetaData()
+    query_admin = User.query.filter_by(email="1@admin.com").first()
+
+    if not query_admin:
+
+
+        #meta = MetaData()
     
-    meta.reflect(bind=db.engine)
-    meta.drop_all(bind=db.engine)
-    print("----- DB DROPPED -----")
+        #meta.reflect(bind=db.engine)
+        #meta.drop_all(bind=db.engine)
+        #print("----- DB DROPPED -----")
 
-    db.create_all()
+        db.create_all()
 
-    db.session.add(admin)
-    db.session.commit()
+        db.session.add(admin)
+        db.session.commit()
 
