@@ -76,6 +76,14 @@ def create_app():
     app.config['SQLALCHEMY_POOL_SIZE'] = 10
     app.config['SQLALCHEMY_POOL_TIMEOUT'] = 5  
     app.config['SQLALCHEMY_POOL_RECYCLE'] = 3600 
+    # Tells SQLAlchemy to test connections for freshness before executing a query
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,     # Automatically reconnects if PostgreSQL dropped the SSL socket
+        "pool_recycle": 300,       # Recycles idle connections every 5 minutes (300s)
+        "pool_timeout": 30,        # Aborts stuck query connections after 30 seconds
+        "max_overflow": 10,
+    }
+    #app.config[SQLALCHEMY_ENGINE_OPTIONS]
 
     # Flask-Mail configs
     app.config['MAIL_SERVER'] = mail_server   # Server SMTP (es. Gmail: smtp.gmail.com)
