@@ -114,7 +114,7 @@ def register():
             db.session.commit()
         elif existing and existing.verified_email:
             # Generic response: never confirm that the address is already registered.
-            flash('If that address can be registered, a verification email is on its way.', 'info')
+            flash('If that address can be registered, a verification email is on its way. Delivery can take 5-10 minutes.', 'info')
             return redirect(url_for('auth.verify_email', email=email))
 
         user = User(
@@ -182,7 +182,7 @@ def resend_verification_email():
 
     if not user:
         # Do not reveal whether the address exists or the token expired.
-        flash('If an unverified account exists for that address, a new verification email is on its way.', 'info')
+        flash('If an unverified account exists for that address, a new verification email is on its way. Delivery can take 5-10 minutes.', 'info')
         return redirect(url_for('auth.verify_email', email=email or ''))
 
     if user.verified_email:
@@ -192,7 +192,7 @@ def resend_verification_email():
     if _send_verification_email(user) == 'failed':
         flash('The verification email could not be sent right now. Please try again in a few minutes or contact support.', 'warning')
     else:
-        flash('A new verification email is on its way. Please also check your spam folder.', 'success')
+        flash('A new verification email is on its way. It can take 5-10 minutes to arrive; please also check your spam folder.', 'success')
     return redirect(url_for('auth.verify_email', email=user.email))
 
 

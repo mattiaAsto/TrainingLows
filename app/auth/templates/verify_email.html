@@ -41,7 +41,7 @@
         {% if email %}
             <p class="text-muted mb-4">A verification email has been sent to <strong>{{ email }}</strong>.</p>
             <p class="mb-3">Please click the link in the email to complete registration.</p>
-            <p class="text-muted small mb-3">Didn't receive it? Check your spam/junk folder first — some providers filter automated emails aggressively.</p>
+            <p class="text-muted small mb-3">Delivery can take 5-10 minutes — please be patient before requesting a new one. If it still hasn't arrived, check your spam/junk folder: some providers filter automated emails aggressively.</p>
             {% if resend_token %}
                 <form method="post" action="{{ url_for('auth.resend_verification_email') }}" class="mb-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
