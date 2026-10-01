@@ -31,9 +31,7 @@
 
         <aside class="settings-side">
             <section class="settings-panel settings-panel--accent"><div class="panel-heading"><div><span class="panel-kicker">Connections</span><h2>Roster & links</h2></div><i class="fas fa-people-group"></i></div><p>Manage athletes, trainers, invitations, and your coaching relationships in one place.</p><a class="btn btn-danger" href="{{ url_for('settings.roster') }}">Open roster <i class="fas fa-arrow-right ms-2"></i></a></section>
-            {% if config.get('STRAVA_API_ACTIVE') %}
             <section class="settings-panel"><div class="panel-heading"><div><span class="panel-kicker">Activity data</span><h2>Strava</h2></div><i class="fab fa-strava"></i></div><p>Connect your account and review imported activities.</p><a class="btn btn-outline-secondary" href="{{ url_for('strava.settings') }}">Manage Strava</a>{% if pending_strava_activities %}<div class="mini-alert"><i class="fas fa-inbox"></i>{{ pending_strava_activities|length }} activities waiting for review</div>{% endif %}</section>
-            {% endif %}
         </aside>
     </div>
 

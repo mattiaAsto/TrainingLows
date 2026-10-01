@@ -145,6 +145,9 @@ def global_injection_dictionary():
 @strava.route("/connect")
 def connect():
     """Redirect the athlete to Strava's OAuth consent page."""
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable. Please try again later.', 'warning')
+        return redirect(url_for('strava.settings'))
     return redirect(build_authorization_url())
 
 
@@ -154,6 +157,10 @@ def callback():
     Strava redirects here after the athlete grants or denies access.
     Exchanges the one-time code for access + refresh tokens.
     """
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable.', 'warning')
+        return redirect(url_for('strava.settings'))
+
     if not consume_oauth_state(request.args.get('state')):
         abort(400)
 
@@ -189,6 +196,9 @@ def callback():
 @strava.route("/disconnect", methods=['POST'])
 def disconnect():
     """Remove the stored Strava token for the current athlete."""
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable.', 'warning')
+        return redirect(url_for('strava.settings'))
     from app.models import StravaToken
 
     token = _get_current_strava_token()
@@ -203,6 +213,9 @@ def disconnect():
 
 @strava.route('/sync/refresh', methods=['POST'])
 def refresh():
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable.', 'warning')
+        return redirect(url_for('strava.settings'))
     if not current_user.is_athlete or not current_user.athlete_profile:
         abort(403)
     try:
@@ -217,6 +230,9 @@ def refresh():
 
 @strava.route('/sync/auto-update', methods=['POST'])
 def set_auto_update():
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable.', 'warning')
+        return redirect(url_for('strava.settings'))
     if not current_user.is_athlete or not current_user.athlete_profile:
         abort(403)
     enabled = request.form.get('enabled') == '1'
@@ -235,6 +251,9 @@ def set_auto_update():
 
 @strava.route('/activity/<int:item_id>/review', methods=['POST'])
 def review_activity(item_id):
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        flash('Strava integration is temporarily unavailable.', 'warning')
+        return redirect(url_for('strava.settings'))
     if not current_user.is_athlete or not current_user.athlete_profile:
         abort(403)
     item = StravaActivity.query.filter_by(id=item_id, user_id=current_user.id, status='pending').first_or_404()
@@ -256,6 +275,8 @@ def review_activity(item_id):
 @strava.route('/webhook', methods=['GET', 'POST'])
 @csrf.exempt
 def webhook():
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        return jsonify({'error': 'Strava integration unavailable'}), 503
     if request.method == 'GET':
         verify_token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
@@ -294,6 +315,8 @@ def settings():
     Page where the user connects or manages their Strava account.
     Passes `connected=True/False` and the athlete profile if connected.
     """
+    api_active = current_app.config.get('STRAVA_API_ACTIVE', False)
+
     StravaActivity.query.filter(
         StravaActivity.user_id == current_user.id,
         StravaActivity.status == 'rejected',
@@ -305,7 +328,7 @@ def settings():
     athlete = None
 
     token = _get_current_strava_token()
-    if token is not None:
+    if api_active and token is not None:
         try:
             athlete = strava_client.get_athlete(token.athlete_id)
             connected = True
@@ -318,6 +341,7 @@ def settings():
         "strava_settings.html",
         connected=connected,
         athlete=athlete,
+        api_active=api_active,
         auto_update=current_user.strava_auto_update if current_user.is_authenticated else False,
         activity_colors=ACTIVITY_COLORS,
         pending_activities=StravaActivity.query.filter_by(user_id=current_user.id, status='pending').order_by(StravaActivity.started_at.desc()).all() if current_user.is_authenticated else [],
