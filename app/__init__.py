@@ -180,6 +180,9 @@ def create_app():
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
     # Feature flag: when not truthy, every Strava route returns 404 and all Strava UI is hidden.
     app.config['STRAVA_API_ACTIVE']    = os.getenv('STRAVA_API_ACTIVE', '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    # Feature flag: the beta bug-report panel on the Support page is visible unless explicitly
+    # disabled; when off, the submission route returns 404 and the panel is hidden.
+    app.config['BETA_TESTING_FEEDBACKS'] = os.getenv('BETA_TESTING_FEEDBACKS', '').strip().lower() not in {'0', 'false', 'no', 'off'}
     app_env = os.getenv('APP_ENV', '').strip().lower()
     # Fail safer: production deploys default to https (secure cookies, https
     # OAuth redirect URIs); local development keeps the http default.
@@ -230,7 +233,11 @@ def create_app():
                 for message in thread.messages
                 if message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at)
             )
-        return {'support_unread_count': unread_count, 'is_admin_user': is_admin_user}
+        return {
+            'support_unread_count': unread_count,
+            'is_admin_user': is_admin_user,
+            'beta_feedbacks_enabled': app.config.get('BETA_TESTING_FEEDBACKS', True),
+        }
 
     """ Adding the tables to the admin panel
     admin_panel.add_view(ArticleView(Article, db.session))

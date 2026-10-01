@@ -6,8 +6,8 @@ from flask_login import current_user
 
 from app import db
 from app.admin.routes import is_admin_user
-from app.email_utils import build_support_request_email, is_valid_email, send_email
-from app.models import SupportMessage, SupportThread
+from app.email_utils import build_bug_report_email, build_support_request_email, is_valid_email, send_email
+from app.models import BugReport, SupportMessage, SupportThread
 from app.rate_limit import enforce_rate_limit
 
 from . import about
@@ -30,8 +30,10 @@ def buy_me_a_coffee():
 def support():
     threads = []
     unread_thread_ids = set()
+    bug_reports = []
     if current_user.is_authenticated:
         threads = SupportThread.query.filter_by(user_id=current_user.id).order_by(SupportThread.updated_at.desc()).all()
+        bug_reports = BugReport.query.filter_by(user_id=current_user.id).order_by(BugReport.created_at.desc()).all()
         unread_thread_ids = {
             thread.id for thread in threads
             if any(message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at) for message in thread.messages)
@@ -84,7 +86,7 @@ def support():
             flash('Your support request was recorded for review.', 'success')
         return redirect(url_for('about.support'))
 
-    return render_template('support.html', threads=threads, unread_thread_ids=unread_thread_ids)
+    return render_template('support.html', threads=threads, unread_thread_ids=unread_thread_ids, bug_reports=bug_reports)
 
 
 @about.route('/support/<int:thread_id>', methods=['GET', 'POST'])
@@ -114,3 +116,58 @@ def support_thread(thread_id):
         db.session.commit()
         return redirect(url_for('about.support_thread', thread_id=thread.id))
     return render_template('support_thread.html', thread=thread, is_admin=is_admin)
+
+
+@about.route('/report-bug', methods=['POST'])
+def report_bug():
+    if not current_app.config.get('BETA_TESTING_FEEDBACKS', True):
+        abort(404)
+    enforce_rate_limit('bug-report', 6, 3600)
+    title = (request.form.get('title') or '').strip()[:160]
+    page_area = (request.form.get('page_area') or '').strip()[:160]
+    steps = (request.form.get('steps_to_reproduce') or '').strip()[:5000]
+    expected = (request.form.get('expected_result') or '').strip()[:2000]
+    actual = (request.form.get('actual_result') or '').strip()[:2000]
+    severity = (request.form.get('severity') or '').strip().lower()
+    if severity not in BugReport.SEVERITIES:
+        severity = 'minor'
+    sender = current_user.email if current_user.is_authenticated else (request.form.get('email') or '').strip().lower()
+    if not current_user.is_authenticated and not is_valid_email(sender):
+        flash('Please provide a valid email address.', 'warning')
+        return redirect(url_for('about.support'))
+    if not all([title, page_area, steps, expected, actual, sender]):
+        flash('Please fill in every field of the bug report.', 'warning')
+        return redirect(url_for('about.support'))
+
+    report = BugReport(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        reporter_email=sender,
+        title=title,
+        page_area=page_area,
+        steps_to_reproduce=steps,
+        expected_result=expected,
+        actual_result=actual,
+        severity=severity,
+        status='new',
+    )
+    db.session.add(report)
+    db.session.commit()
+
+    recipient = current_app.config.get('MAIL_SUPPORT_EMAIL')
+    if recipient:
+        subject_line, text_body, html_body = build_bug_report_email(sender, title, page_area, severity, steps, expected, actual)
+        result = send_email(
+            subject_line,
+            text_body,
+            html_body,
+            recipients=[recipient],
+            reply_to=sender,
+        )
+        if result != 'failed':
+            flash('Thank you! Your bug report was sent to the team.', 'success')
+        else:
+            flash('The bug report could not be sent. Please try again later.', 'danger')
+    else:
+        current_app.logger.info('Bug report %s was stored without an email notification.', report.id)
+        flash('Your bug report was recorded for review.', 'success')
+    return redirect(url_for('about.support'))

@@ -284,3 +284,33 @@ def build_support_reply_email(thread_subject, reply_body):
         'the conversation.</p>',
     )
     return subject, text_body, html_body
+
+
+def build_bug_report_email(reporter, title, page_area, severity, steps, expected, actual):
+    """Returns (subject, text_body, html_body)."""
+    safe_title = ' '.join(title.split())
+    subject = f'TrainingLows bug report [{severity}]: {safe_title}'
+    text_body = (
+        f'From: {reporter}\n'
+        f'Severity: {severity}\n'
+        f'Where: {page_area}\n\n'
+        f'Steps to reproduce:\n{steps}\n\n'
+        f'Expected result:\n{expected}\n\n'
+        f'Actual result:\n{actual}'
+    )
+
+    def block(heading, body):
+        return (
+            f'<p style="margin:16px 0 4px;font-size:13px;font-weight:bold;color:#555;">{heading}</p>'
+            f'<p style="margin:0;font-size:15px;color:#333;white-space:pre-line;">{_esc(body)}</p>'
+        )
+
+    html_body = email_layout(
+        f'Bug report: {_esc(safe_title)}',
+        f'<p style="font-size:13px;color:#555;">From: {_esc(reporter)} &middot; '
+        f'Severity: {_esc(severity)} &middot; Where: {_esc(page_area)}</p>'
+        + block('Steps to reproduce', steps)
+        + block('Expected result', expected)
+        + block('Actual result', actual),
+    )
+    return subject, text_body, html_body

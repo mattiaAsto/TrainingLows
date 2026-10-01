@@ -15,6 +15,7 @@ from app.email_utils import build_support_reply_email, send_email
 from app.models import (
     Activity,
     Athlete,
+    BugReport,
     Coach,
     DailyMetric,
     PendingInvite,
@@ -156,6 +157,27 @@ class SupportAdminView(AdminAccessMixin, BaseView):
         return self.render('admin/support/thread.html', thread=thread)
 
 
+class BugReportAdminView(AdminAccessMixin, BaseView):
+    @expose('/')
+    def index(self):
+        status = request.args.get('status', 'new')
+        query = BugReport.query.order_by(BugReport.updated_at.desc())
+        if status in BugReport.STATUSES:
+            query = query.filter_by(status=status)
+        return self.render('admin/bugs/index.html', reports=query.all(), active_status=status)
+
+    @expose('/report/<int:report_id>', methods=['GET', 'POST'])
+    def report(self, report_id):
+        report = BugReport.query.get_or_404(report_id)
+        if request.method == 'POST':
+            new_status = request.form.get('status', '')
+            if new_status in BugReport.STATUSES:
+                report.status = new_status
+                db.session.commit()
+            return redirect(url_for('.report', report_id=report.id))
+        return self.render('admin/bugs/detail.html', report=report)
+
+
 class AdminHomeView(AdminAccessMixin, AdminIndexView):
     @expose('/')
     def index(self):
@@ -163,6 +185,7 @@ class AdminHomeView(AdminAccessMixin, AdminIndexView):
             User, Athlete, Coach, Activity, PlannedActivity, DailyMetric,
             TrainingSeason, TrainingObjective, TrainingPhase, PhaseObjective,
             PhaseWeeklyTarget, PendingInvite, StravaToken, StravaActivity, SupportThread, SupportMessage,
+            BugReport,
         ]
         counts = []
         for model in models:
@@ -220,6 +243,7 @@ def init_admin(app):
     for model, view_class, category in views:
         admin.add_view(view_class(model, db.session, category=category))
     admin.add_view(SupportAdminView(name='Support inbox', endpoint='support', category='Support'))
+    admin.add_view(BugReportAdminView(name='Bug reports', endpoint='bug_reports', category='Support'))
 
     for activity_type in ACTIVITY_TYPES:
         activity_model = get_activity_model(activity_type)

@@ -190,6 +190,29 @@ class SupportMessage(db.Model):
     author = db.relationship('User', backref='support_messages')
 
 
+class BugReport(db.Model):
+    """One-shot beta bug report; the admin triages it by updating its status."""
+    __tablename__ = 'bug_reports'
+
+    SEVERITIES = ('blocker', 'major', 'minor', 'cosmetic')
+    STATUSES = ('new', 'in_progress', 'fixed')
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('Users.id', ondelete='SET NULL'), nullable=True, index=True)
+    reporter_email = db.Column(db.String(120), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    page_area = db.Column(db.String(160), nullable=False)
+    steps_to_reproduce = db.Column(db.Text, nullable=False)
+    expected_result = db.Column(db.Text, nullable=False)
+    actual_result = db.Column(db.Text, nullable=False)
+    severity = db.Column(db.String(20), nullable=False, default='minor', index=True)
+    status = db.Column(db.String(20), nullable=False, default='new', index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo('Europe/Zurich')))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(ZoneInfo('Europe/Zurich')), onupdate=lambda: datetime.now(ZoneInfo('Europe/Zurich')))
+
+    user = db.relationship('User', backref=db.backref('bug_reports', cascade='all, delete-orphan'))
+
+
 class PlannedActivity(db.Model):
     """Weekly training program for a given athlete, used for planned-vs-done comparisons."""
     __tablename__ = "planned_activities"

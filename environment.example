@@ -36,3 +36,5 @@ STRAVA_API_ACTIVE = false
 HOST =
 PORT =
 BUY_ME_A_COFFEE_URL =
+# Beta bug-report panel on the Support page; set to false to hide it completely (submission route returns 404).
+BETA_TESTING_FEEDBACKS = true

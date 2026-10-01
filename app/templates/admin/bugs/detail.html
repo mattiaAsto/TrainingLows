@@ -1,0 +1,50 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container py-4 bug-admin-detail">
+    <a href="{{ url_for('bug_reports.index') }}" class="text-muted"><i class="fas fa-arrow-left me-2"></i>Bug reports</a>
+    <div class="bug-admin-header">
+        <div>
+            <div class="admin-kicker">Bug report #{{ report.id }}</div>
+            <h1>{{ report.title }}</h1>
+            <p>{{ report.reporter_email }} · {{ report.page_area }} · Severity: {{ report.severity|title }}</p>
+        </div>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="btn-group">
+                <button class="btn btn-sm {% if report.status == 'new' %}btn-danger{% else %}btn-outline-secondary{% endif %}" name="status" value="new" type="submit">New</button>
+                <button class="btn btn-sm {% if report.status == 'in_progress' %}btn-danger{% else %}btn-outline-secondary{% endif %}" name="status" value="in_progress" type="submit">In progress</button>
+                <button class="btn btn-sm {% if report.status == 'fixed' %}btn-danger{% else %}btn-outline-secondary{% endif %}" name="status" value="fixed" type="submit">Fixed</button>
+            </div>
+        </form>
+    </div>
+    <section class="bug-admin-panel">
+        <div class="bug-detail-block">
+            <h2>Steps to reproduce</h2>
+            <p>{{ report.steps_to_reproduce }}</p>
+        </div>
+        <div class="bug-detail-block">
+            <h2>Expected result</h2>
+            <p>{{ report.expected_result }}</p>
+        </div>
+        <div class="bug-detail-block">
+            <h2>Actual result</h2>
+            <p>{{ report.actual_result }}</p>
+        </div>
+        <div class="bug-detail-meta">Reported {{ report.created_at|date_eu(true) }} · Last update {{ report.updated_at|date_eu(true) }} · Status: {{ report.status.replace('_', ' ')|title }}{% if report.user %} · Account: {{ report.user.email }}{% endif %}</div>
+    </section>
+</div>
+{% endblock %}
+{% block head %}{{ super() }}
+<style>
+.bug-admin-detail { max-width:900px; }
+.admin-kicker { color:#dc3545; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.bug-admin-header { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; margin:1.25rem 0; padding:1.25rem; border:1px solid #e9ecef; border-radius:10px; background:#f8f9fa; }
+.bug-admin-header h1 { margin:.15rem 0 .3rem; font-size:1.6rem; font-weight:700; }
+.bug-admin-header p { margin:0; color:#6c757d; font-size:.85rem; }
+.bug-admin-panel { padding:1.4rem; border:1px solid #e9ecef; border-radius:10px; background:#fff; }
+.bug-detail-block { margin-bottom:1.25rem; }
+.bug-detail-block h2 { margin:0 0 .4rem; font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#dc3545; }
+.bug-detail-block p { margin:0; color:#27313d; white-space:pre-line; }
+.bug-detail-meta { padding-top:1rem; border-top:1px solid #e9ecef; color:#6c757d; font-size:.8rem; }
+</style>
+{% endblock %}

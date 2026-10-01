@@ -1,0 +1,51 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container-fluid py-4 bugs-admin">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <div class="admin-kicker">Beta feedback</div>
+            <h1>Bug reports</h1>
+            <p class="text-muted mb-0">Review reported bugs, check their severity, and update their status as fixes ship.</p>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-sm {% if active_status == 'new' %}btn-danger{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('bug_reports.index', status='new') }}">New</a>
+            <a class="btn btn-sm {% if active_status == 'in_progress' %}btn-danger{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('bug_reports.index', status='in_progress') }}">In progress</a>
+            <a class="btn btn-sm {% if active_status == 'fixed' %}btn-danger{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('bug_reports.index', status='fixed') }}">Fixed</a>
+            <a class="btn btn-sm {% if active_status not in ['new','in_progress','fixed'] %}btn-danger{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('bug_reports.index', status='all') }}">All</a>
+        </div>
+    </div>
+    {% if reports %}
+    <div class="bug-report-list">
+        {% for report in reports %}
+        <a class="bug-report-row" href="{{ url_for('bug_reports.report', report_id=report.id) }}">
+            <div>
+                <strong>{{ report.title }}</strong>
+                <small>{{ report.reporter_email }} · {{ report.page_area }} · Updated {{ report.updated_at|date_eu(true) }}</small>
+            </div>
+            <span class="badge bug-severity bug-severity--{{ report.severity }}">{{ report.severity|title }}</span>
+            <span class="badge {% if report.status == 'new' %}text-bg-danger{% elif report.status == 'in_progress' %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ report.status.replace('_', ' ')|title }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-bugs">No {{ active_status.replace('_', ' ') if active_status in ['new','in_progress','fixed'] else '' }} bug reports.</div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block head %}{{ super() }}
+<style>
+.bugs-admin { max-width:1200px; }
+.bugs-admin h1 { font-weight:700; }
+.admin-kicker { color:#dc3545; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.bug-report-list { display:grid; gap:.7rem; }
+.bug-report-row { display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:1rem 1.1rem; border:1px solid #e9ecef; border-radius:9px; background:#fff; color:#27313d; text-decoration:none; }
+.bug-report-row:hover { border-color:#dc3545; }
+.bug-report-row strong,.bug-report-row small { display:block; }
+.bug-report-row small { margin-top:.2rem; color:#6c757d; }
+.bug-severity--blocker { background:#7f1d1d; color:#fff; }
+.bug-severity--major { background:#fd7e14; color:#fff; }
+.bug-severity--minor { background:#6c757d; color:#fff; }
+.bug-severity--cosmetic { background:#0dcaf0; color:#000; }
+.empty-bugs { padding:2rem; border:1px dashed #dee2e6; border-radius:9px; color:#6c757d; text-align:center; }
+</style>
+{% endblock %}
