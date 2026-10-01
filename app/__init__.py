@@ -154,6 +154,13 @@ def create_app():
     app.config['MAIL_USERNAME'] = mail_username  # Email per l'autenticazione
     app.config['MAIL_PASSWORD'] = mail_password         # Password per l'autenticazione
     app.config['MAIL_DEFAULT_SENDER'] = mail_default_sender  # Mittente predefinito (opzionale)
+    app.config['MAIL_SENDER_NAME'] = os.getenv('MAIL_SENDER_NAME', 'TrainingLows')
+    # Brevo HTTP API key; when set it takes priority over SMTP for transactional email.
+    app.config['BREVO_API_KEY'] = os.getenv('BREVO_API_KEY', '').strip()
+    # Inbox that receives support request notifications; defaults to the sender address.
+    app.config['MAIL_SUPPORT_EMAIL'] = (
+        os.getenv('MAIL_SUPPORT_EMAIL', '').strip() or mail_default_sender
+    )
 
     # Secret key for Flask security config
     app.config['SECRET_KEY'] = secret_key

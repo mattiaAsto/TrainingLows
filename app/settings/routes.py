@@ -1,9 +1,13 @@
 from datetime import date, datetime, timedelta
 from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
-from flask_mail import Message
 from flask_login import current_user
 
-from app import db, mail
+from app import db
+from app.email_utils import (
+    build_invitation_email,
+    build_verification_email,
+    send_email,
+)
 from app.activity_catalog import ACTIVITY_COLORS
 from app.athlete_context import athlete_is_visible, managed_athletes as get_roster_for_current_user, selected_athlete as get_selected_athlete
 from app.models import Activity, Athlete, Coach, PendingInvite, PlannedActivity, StravaActivity, User
@@ -44,53 +48,28 @@ def _encode_invite_token(payload, salt_name='settings-link-token'):
 
 
 def _send_invitation_email(recipient, recipient_name, sender_name, invite_url, invitation_type):
-    if not current_app.config.get('MAIL_SERVER') or not current_app.config.get('MAIL_DEFAULT_SENDER'):
-        return False
-
-    message = Message(
-        subject=f'{sender_name} invited you to connect on TrainingLows',
-        recipients=[recipient],
-        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
-        body=(
-            f'Hi {recipient_name},\n\n'
-            f'{sender_name} sent you a {invitation_type} invitation on TrainingLows.\n\n'
-            f'Open the invitation here:\n{invite_url}\n\n'
-            'You will need to sign in to review and accept or decline it.\n\n'
-            'If you were not expecting this invitation, you can ignore this email.'
-        ),
+    subject, text_body, html_body = build_invitation_email(
+        recipient_name, sender_name, invite_url, invitation_type,
     )
-    try:
-        mail.send(message)
-        return True
-    except Exception:
-        current_app.logger.exception('Could not send TrainingLows invitation email')
-        return False
+    return send_email(
+        subject,
+        text_body,
+        html_body,
+        recipients=[recipient],
+    )
 
 
 def _send_verification_email(user):
     token = current_app.url_serializer.dumps({'email': user.email}, salt='email-verification')
     verification_url = url_for('auth.verify_email_token', token=token, _external=True)
-
-    if not current_app.config.get('MAIL_SERVER') or not current_app.config.get('MAIL_DEFAULT_SENDER'):
-        flash(f'Verification link: {verification_url}', 'info')
-        return True
-
-    message = Message(
-        subject='Verify your TrainingLows email address',
+    subject, text_body, html_body = build_verification_email(user.first_name, verification_url)
+    return send_email(
+        subject,
+        text_body,
+        html_body,
         recipients=[user.email],
-        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
-        body=(
-            f'Hi {user.first_name},\n\n'
-            f'Please verify your email address by opening this link:\n{verification_url}\n\n'
-            'If you did not request this change, you can ignore this email.'
-        ),
+        dev_fallback_url=verification_url,
     )
-    try:
-        mail.send(message)
-        return True
-    except Exception:
-        current_app.logger.exception('Could not send TrainingLows verification email')
-        return False
 
 
 def _ensure_role_flags(user):
@@ -274,7 +253,7 @@ def update_profile():
     if email_changed:
         sent = _send_verification_email(current_user)
         flash(
-            'Your email was changed. Verify the new address to restore full account access.' if sent
+            'Your email was changed. Verify the new address to restore full account access.' if sent != 'failed'
             else 'Your email was changed, but the verification email could not be sent.',
             'warning',
         )
@@ -291,8 +270,8 @@ def send_verification():
 
     sent = _send_verification_email(current_user)
     flash(
-        'A new verification email has been sent.' if sent else 'The verification email could not be sent. Please try again later or contact support.',
-        'success' if sent else 'warning',
+        'A new verification email has been sent.' if sent != 'failed' else 'The verification email could not be sent. Please try again later or contact support.',
+        'success' if sent != 'failed' else 'warning',
     )
     return redirect(url_for('settings.settings_home'))
 

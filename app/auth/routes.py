@@ -1,9 +1,9 @@
 from flask import render_template, request, redirect, url_for, session, current_app, flash, jsonify
-from flask_mail import Message
 from flask_login import login_user, logout_user, current_user
 from . import auth
 from app.models import *
-from app import db, mail
+from app import db
+from app.email_utils import build_verification_email, send_email
 from werkzeug.security import check_password_hash
 from sqlalchemy import func
 import os
@@ -21,30 +21,29 @@ def _build_verification_token(email):
     return current_app.url_serializer.dumps({"email": email}, salt="email-verification")
 
 
+def _build_resend_token(email):
+    return current_app.url_serializer.dumps({"email": email}, salt="email-resend")
+
+
+def _read_resend_token(token):
+    try:
+        payload = current_app.url_serializer.loads(token, salt="email-resend", max_age=60 * 10)
+    except Exception:
+        return None
+    return payload.get("email")
+
+
 def _send_verification_email(user):
     token = _build_verification_token(user.email)
     verification_url = url_for("auth.verify_email_token", token=token, _external=True)
-
-    if current_app.config.get("MAIL_SERVER") and current_app.config.get("MAIL_DEFAULT_SENDER"):
-        msg = Message(
-            subject="Verify your TrainingLows account",
-            recipients=[user.email],
-            sender=current_app.config.get("MAIL_DEFAULT_SENDER"),
-            body=(
-                f"Hi {user.first_name},\n\n"
-                f"Please verify your account by clicking the link below:\n{verification_url}\n\n"
-                "If you did not create this account, you can ignore this email."
-            )
-        )
-        try:
-            mail.send(msg)
-            return True
-        except Exception:
-            current_app.logger.exception('Could not send verification email for user %s', user.id)
-            return False
-
-    flash(f"Verification link: {verification_url}", "info")
-    return True
+    subject, text_body, html_body = build_verification_email(user.first_name, verification_url)
+    return send_email(
+        subject,
+        text_body,
+        html_body,
+        recipients=[user.email],
+        dev_fallback_url=verification_url,
+    )
 
 
 @auth.route("/login", methods=['GET', 'POST'])
@@ -135,7 +134,7 @@ def register():
             db.session.add(coach_profile)
 
         db.session.commit()
-        if not _send_verification_email(user):
+        if _send_verification_email(user) == 'failed':
             flash('Your account was created, but the verification email could not be sent. Please try again later or contact support.', 'warning')
         return redirect(url_for('auth.verify_email', email=email))
 
@@ -150,7 +149,30 @@ def verify_email():
         flash('Your email is already verified.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('verify_email.html', email=email, user=user)
+    resend_token = _build_resend_token(email) if user else None
+    return render_template('verify_email.html', email=email, user=user, resend_token=resend_token)
+
+
+@auth.route('/verify_email/resend', methods=['POST'])
+def resend_verification_email():
+    token = request.form.get('token', '')
+    email = _read_resend_token(token)
+    user = User.query.filter_by(email=email).first() if email else None
+
+    if not user:
+        # Do not reveal whether the address exists or the token expired.
+        flash('If an unverified account exists for that address, a new verification email is on its way.', 'info')
+        return redirect(url_for('auth.verify_email', email=email or ''))
+
+    if user.verified_email:
+        flash('Your email is already verified.', 'success')
+        return redirect(url_for('auth.login'))
+
+    if _send_verification_email(user) == 'failed':
+        flash('The verification email could not be sent right now. Please try again in a few minutes or contact support.', 'warning')
+    else:
+        flash('A new verification email is on its way. Please also check your spam folder.', 'success')
+    return redirect(url_for('auth.verify_email', email=user.email))
 
 
 @auth.route('/verify_email/<token>')

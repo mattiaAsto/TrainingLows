@@ -11,6 +11,13 @@ MAIL_USE_SSL =
 MAIL_USERNAME =
 MAIL_PASSWORD =
 MAIL_DEFAULT_SENDER =
+# Display name used in the From header.
+MAIL_SENDER_NAME = TrainingLows
+# Transactional email via Brevo HTTP API (preferred; takes priority over SMTP).
+# Create a free account at brevo.com (300 emails/day) and generate an API key.
+BREVO_API_KEY =
+# Inbox that receives support request notifications; defaults to MAIL_DEFAULT_SENDER.
+MAIL_SUPPORT_EMAIL =
 
 SECRET_KEY =
 # Admin login email; it need not receive email. Defaults to 1@admin.com.

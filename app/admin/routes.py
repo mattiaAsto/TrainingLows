@@ -5,13 +5,13 @@ from flask import abort, current_app, redirect, request, url_for
 from flask_admin import Admin, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import BaseForm
-from flask_mail import Message
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 from wtforms import HiddenField
 
-from app import db, mail
+from app import db
 from app.activity_catalog import ACTIVITY_TYPES
+from app.email_utils import build_support_reply_email, send_email
 from app.models import (
     Activity,
     Athlete,
@@ -144,16 +144,14 @@ class SupportAdminView(AdminAccessMixin, BaseView):
                 db.session.add(SupportMessage(thread_id=thread.id, author_id=current_user.id, author_email=current_user.email, body=body, is_admin=True))
                 thread.status = 'open'
             db.session.commit()
-            if action == 'reply' and body and current_app.config.get('MAIL_SERVER') and current_app.config.get('MAIL_DEFAULT_SENDER'):
-                try:
-                    mail.send(Message(
-                        subject=f'Reply from TrainingLows support: {thread.subject}',
-                        recipients=[thread.requester_email],
-                        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
-                        body=f'There is a new reply in your TrainingLows support discussion "{thread.subject}".\n\n{body}\n\nOpen Support TL to continue the conversation.',
-                    ))
-                except Exception:
-                    current_app.logger.exception('Could not send support reply notification')
+            if action == 'reply' and body:
+                subject, text_body, html_body = build_support_reply_email(thread.subject, body)
+                send_email(
+                    subject,
+                    text_body,
+                    html_body,
+                    recipients=[thread.requester_email],
+                )
             return redirect(url_for('.thread', thread_id=thread.id))
         return self.render('admin/support/thread.html', thread=thread)
 

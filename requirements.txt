@@ -20,7 +20,7 @@ Flask-WTF==1.2.2
 bcrypt==4.2.0
 
 # Integrations
-requests==2.32.3
+requests==2.32.5
 python-dotenv==1.0.1
 tzdata==2026.4
 

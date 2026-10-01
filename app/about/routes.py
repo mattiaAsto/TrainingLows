@@ -2,11 +2,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from flask import abort, current_app, flash, redirect, render_template, request, url_for
-from flask_mail import Message
 from flask_login import current_user
 
-from app import db, mail
+from app import db
 from app.admin.routes import is_admin_user
+from app.email_utils import build_support_request_email, send_email
 from app.models import SupportMessage, SupportThread
 
 from . import about
@@ -60,19 +60,19 @@ def support():
         ))
         db.session.commit()
 
-        recipient = current_app.config.get('MAIL_DEFAULT_SENDER')
-        if recipient and current_app.config.get('MAIL_SERVER'):
-            try:
-                mail.send(Message(
-                    subject=f'TrainingLows support: {subject}',
-                    recipients=[recipient],
-                    reply_to=sender,
-                    sender=recipient,
-                    body=f'From: {sender}\n\n{message}',
-                ))
+        recipient = current_app.config.get('MAIL_SUPPORT_EMAIL')
+        if recipient:
+            subject_line, text_body, html_body = build_support_request_email(sender, subject, message)
+            result = send_email(
+                subject_line,
+                text_body,
+                html_body,
+                recipients=[recipient],
+                reply_to=sender,
+            )
+            if result != 'failed':
                 flash('Your support request was sent. You can follow the discussion below.', 'success')
-            except Exception:
-                current_app.logger.exception('Could not send support request')
+            else:
                 flash('The support request could not be sent. Please try again later.', 'danger')
         else:
             current_app.logger.info('Support request %s was stored without an email notification.', thread.id)
