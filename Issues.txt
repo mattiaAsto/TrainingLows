@@ -1,0 +1,15 @@
+Location            | Issue                         
+
+--- LOCAL DEPLOY ---
+
+
+--- RENDER DEPLOY ---
+/season/            | Location not reachable only in render deploy, cant reach it with athlete nor trainer account
+
+RANDOM              | App doesnt implement db rollbacks and globally the db structure management is weak wich leads to :
+                    | sqlalchemy.exc.PendingRollbackError: Can't reconnect until invalid transaction is rolled back.  Please rollback() fully before proceeding (Background on this error at: https://sqlalche.me/e/20/8s2b)
+                    | Issue mainly appears on /admin/users after first deploy but also appears randomly
+
+/register           | Send verification email fails mostly upon new user registration (email address of developer recives messages but emails addresses of alpha testers dont, developer DOESNT recive testers messages)
+
+
