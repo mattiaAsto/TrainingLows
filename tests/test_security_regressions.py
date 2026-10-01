@@ -4,6 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import bcrypt
 from flask import Flask, render_template_string
 from flask_wtf.csrf import CSRFProtect
 from wtforms import StringField
@@ -18,10 +19,65 @@ from app.settings import settings as settings_blueprint
 from app.settings.routes import _get_pending_link_invite, add_athlete
 from app.strava.auth import build_authorization_url, consume_oauth_state
 from app.strava.routes import _get_strava_token_for_user
-from app import create_app
+from app import create_app, update_schema
+from app.models import User
+from production_update import ensure_admin_account, run as run_production_update
 
 
 class SecurityRegressionTests(unittest.TestCase):
+    def test_default_admin_email_is_used_when_unset(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+        self.assertEqual(app.config['ADMIN_EMAIL'], '1@admin.com')
+
+    def test_production_update_requires_strong_admin_password_before_backup(self):
+        settings = {'APP_ENV': 'production', 'ADMIN_PASSWORD': ''}
+        with patch.dict(os.environ, settings, clear=True), patch('production_update.load_dotenv'):
+            with patch('production_update.backup_database') as backup:
+                with self.assertRaisesRegex(RuntimeError, 'ADMIN_PASSWORD must be configured'):
+                    run_production_update(True)
+                backup.assert_not_called()
+
+    def test_configured_admin_can_login_and_open_admin_without_email(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+            'ADMIN_EMAIL': 'admin@traininglows.local',
+        }
+        password = 'admin-password-for-tests-123'
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+            ensure_admin_account(app, password)
+
+        with app.app_context():
+            admin = User.query.filter_by(email='admin@traininglows.local').one()
+            self.assertTrue(admin.verified_email)
+            self.assertTrue(admin.is_trainer)
+            self.assertIsNotNone(admin.coach_profile)
+            self.assertTrue(bcrypt.checkpw(password.encode(), admin.password))
+
+        client = app.test_client()
+        login_page = client.get('/auth/login')
+        csrf_token = re.search(
+            rb'name="csrf_token" value="([^"]+)"',
+            login_page.data,
+        ).group(1).decode()
+        response = client.post('/auth/login', data={
+            'email': 'admin@traininglows.local',
+            'password': password,
+            'csrf_token': csrf_token,
+        })
+        self.assertEqual(response.status_code, 302)
+        admin_page = client.get('/admin/')
+        self.assertEqual(admin_page.status_code, 200)
+
     def test_mysql_url_uses_configured_port_and_escapes_credentials(self):
         settings = {
             'DB_COMPLETE_URL': '',

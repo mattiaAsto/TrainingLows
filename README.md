@@ -27,7 +27,7 @@ APP_ENV=production python production_update.py --apply --yes
 ```
 
 Run this as a release step before starting or replacing Gunicorn workers. The WSGI app does not create or alter tables at worker startup, avoiding concurrent schema changes across workers.
-On a fresh database, register and verify the account that should administer the app, then set `ADMIN_EMAIL` to that exact address in Render. The application grants no admin access when this setting is empty and does not create a default-password account. Check for and secure any legacy seeded admin account already in the database.
+The production updater provisions the admin account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` before Gunicorn starts. See [docs/ADMIN.md](docs/ADMIN.md) for Render setup and login instructions.
 
 For Render/Gunicorn, use the import-safe WSGI entrypoint as the start command:
 

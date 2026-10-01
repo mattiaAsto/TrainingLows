@@ -13,7 +13,10 @@ MAIL_PASSWORD =
 MAIL_DEFAULT_SENDER =
 
 SECRET_KEY =
-ADMIN_EMAIL =
+# Admin login email; it need not receive email. Defaults to 1@admin.com.
+ADMIN_EMAIL = 1@admin.com
+# Required for production_update.py --apply; use at least 16 characters.
+ADMIN_PASSWORD =
 PREFERRED_URL_SCHEME = http
 
 CACHE_TYPE =

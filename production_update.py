@@ -125,6 +125,50 @@ def check_catalog_models(definitions):
             raise RuntimeError(f'{activity_type}: expected model {definition["model"]!r}, got {model.__name__!r}')
 
 
+def ensure_admin_account(app, password):
+    import bcrypt
+    from app import db
+    from app.models import Coach, User
+
+    email = app.config['ADMIN_EMAIL']
+    password_bytes = password.encode('utf-8')
+    with app.app_context():
+        try:
+            admin = User.query.filter_by(email=email).with_for_update().first()
+            if admin is None:
+                admin = User(
+                    first_name='Admin',
+                    last_name='Admin',
+                    email=email,
+                    password=bcrypt.hashpw(password_bytes, bcrypt.gensalt()),
+                    verified_email=True,
+                    is_trainer=True,
+                )
+                db.session.add(admin)
+                db.session.flush()
+            else:
+                try:
+                    password_matches = bcrypt.checkpw(password_bytes, admin.password)
+                except ValueError:
+                    password_matches = False
+                if not password_matches:
+                    admin.password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+                admin.verified_email = True
+                admin.is_trainer = True
+
+            if admin.coach_profile is None:
+                db.session.add(Coach(
+                    id=admin.id,
+                    specialization='General',
+                    bio='TrainingLows administrator',
+                ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Could not provision the configured administrator account')
+            raise
+
+
 def run(apply):
     load_dotenv()
     definitions = load_catalog()
@@ -137,6 +181,9 @@ def run(apply):
     app_env = os.getenv('APP_ENV', '').lower()
     if app_env != 'production':
         raise RuntimeError('Refusing to apply without APP_ENV=production.')
+    admin_password = os.getenv('ADMIN_PASSWORD', '')
+    if len(admin_password) < 16:
+        raise RuntimeError('ADMIN_PASSWORD must be configured with at least 16 characters.')
 
     from app import create_app, update_schema
     from app.models import get_activity_model
@@ -154,6 +201,7 @@ def run(apply):
 
     app = create_app()
     update_schema(app)
+    ensure_admin_account(app, admin_password)
     with app.app_context():
         validate_schema(app)
         for activity_type in definitions:

@@ -157,7 +157,7 @@ def create_app():
 
     # Secret key for Flask security config
     app.config['SECRET_KEY'] = secret_key
-    app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', '').strip().lower()
+    app.config['ADMIN_EMAIL'] = (os.getenv('ADMIN_EMAIL') or '1@admin.com').strip().lower()
 
     app.url_serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -252,7 +252,10 @@ def create_app():
     from .models import User
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(user_id)
+        try:
+            return db.session.get(User, int(user_id))
+        except (TypeError, ValueError):
+            return None
     
     
     
