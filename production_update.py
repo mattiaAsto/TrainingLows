@@ -60,6 +60,31 @@ def backup_database(url, backup_dir):
         destination = backup_dir / f'traininglows-{timestamp}.sqlite'
         shutil.copy2(source, destination)
         return destination
+    if url.drivername.split('+', 1)[0] in {'postgres', 'postgresql'}:
+        destination = backup_dir / f'traininglows-{timestamp}.dump'
+        command = [
+            'pg_dump', '--format=custom', '--no-owner', '--no-privileges',
+            '--host', url.host or 'localhost',
+            '--port', str(url.port or 5432),
+            '--username', url.username or '',
+            '--file', str(destination),
+            '--dbname', url.database or '',
+        ]
+        environment = os.environ.copy()
+        if url.password:
+            environment['PGPASSWORD'] = url.password
+        for option in ('sslmode', 'sslrootcert', 'sslcert', 'sslkey'):
+            value = url.query.get(option)
+            if value:
+                environment[f'PG{option.upper()}'] = str(value)
+        try:
+            subprocess.run(command, check=True, env=environment, capture_output=True, text=True)
+        except FileNotFoundError as error:
+            raise RuntimeError('pg_dump was not found. Install the PostgreSQL client or create a verified backup before using --apply.') from error
+        except subprocess.CalledProcessError as error:
+            detail = (error.stderr or '').strip()
+            raise RuntimeError(f'Database backup failed: {detail or "pg_dump returned an error"}') from error
+        return destination
     if url.drivername not in {'mysql', 'mysql+pymysql'}:
         raise RuntimeError(f'Automatic backups are not implemented for {url.drivername}.')
 

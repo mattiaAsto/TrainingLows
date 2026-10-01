@@ -83,10 +83,12 @@ def create_app():
     db_port = os.getenv("DB_PORT")
     db_name = os.getenv("DB_NAME")
 
-    db_complete_url = os.getenv("DB_COMPLETE_URL", None)
+    db_complete_url = os.getenv("DB_COMPLETE_URL") or os.getenv("DATABASE_URL")
 
     if not db_complete_url:
         db_complete_url = f'mysql+pymysql://{db_user}:{db_password}@{db_hostname}:3306/{db_name}'
+    elif db_complete_url.startswith('postgres://'):
+        db_complete_url = 'postgresql://' + db_complete_url[len('postgres://'):]
 
     mail_server = str(os.getenv("MAIL_SERVER"))
     mail_port = int(os.getenv("MAIL_PORT"))
