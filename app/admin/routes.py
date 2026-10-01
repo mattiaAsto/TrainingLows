@@ -4,8 +4,11 @@ from zoneinfo import ZoneInfo
 from flask import abort, current_app, redirect, request, url_for
 from flask_admin import Admin, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.form import BaseForm
 from flask_mail import Message
 from flask_login import current_user
+from flask_wtf.csrf import generate_csrf
+from wtforms import HiddenField
 
 from app import db, mail
 from app.activity_catalog import ACTIVITY_TYPES
@@ -30,11 +33,23 @@ from app.models import (
 )
 
 
-ADMIN_EMAIL = '1@admin.com'
-
-
 def is_admin_user():
-    return current_user.is_authenticated and current_user.email.lower() == ADMIN_EMAIL
+    admin_email = current_app.config.get('ADMIN_EMAIL')
+    return (
+        current_user.is_authenticated
+        and current_user.verified_email
+        and bool(admin_email)
+        and current_user.email.lower() == admin_email
+    )
+
+
+class AdminCSRFForm(BaseForm):
+    csrf_token = HiddenField(default=generate_csrf)
+
+    def populate_obj(self, obj):
+        for name, field in self._fields.items():
+            if name != 'csrf_token':
+                field.populate_obj(obj, name)
 
 
 class AdminAccessMixin:
@@ -48,6 +63,7 @@ class AdminAccessMixin:
 
 
 class AdminModelView(AdminAccessMixin, ModelView):
+    form_base_class = AdminCSRFForm
     can_view_details = True
     can_export = True
     page_size = 25
@@ -68,6 +84,8 @@ class AdminModelView(AdminAccessMixin, ModelView):
 
 
 class UserAdminView(AdminModelView):
+    can_export = False
+    column_details_list = ('id', 'first_name', 'last_name', 'email', 'is_athlete', 'is_trainer', 'verified_email', 'strava_auto_update')
     column_list = ('id', 'first_name', 'last_name', 'email', 'is_athlete', 'is_trainer', 'verified_email', 'strava_auto_update')
     column_searchable_list = ('email', 'first_name', 'last_name')
     column_filters = ('is_athlete', 'is_trainer', 'verified_email', 'strava_auto_update')
@@ -93,6 +111,15 @@ class ActivityAdminView(AdminModelView):
     column_searchable_list = ('title', 'activity_type', 'intensity')
     column_filters = ('activity_type', 'intensity', 'date', 'athlete_id')
     form_excluded_columns = ('athlete',)
+
+
+class StravaTokenAdminView(AdminModelView):
+    can_create = False
+    can_delete = False
+    can_edit = False
+    can_export = False
+    can_view_details = False
+    column_list = ('id', 'athlete_id', 'expires_at', 'scope')
 
 
 class SupportAdminView(AdminAccessMixin, BaseView):
@@ -148,7 +175,12 @@ class AdminHomeView(AdminAccessMixin, AdminIndexView):
                 current_app.logger.exception('Could not count rows for admin model %s', model.__name__)
                 counts.append({'label': model.__name__, 'count': '—', 'endpoint': None})
         counts.sort(key=lambda item: item['label'].lower())
-        return self.render('admin/index.html', counts=counts, activity_types=list(ACTIVITY_TYPES), admin_email=ADMIN_EMAIL)
+        return self.render(
+            'admin/index.html',
+            counts=counts,
+            activity_types=list(ACTIVITY_TYPES),
+            admin_email=current_app.config.get('ADMIN_EMAIL') or 'Not configured',
+        )
 
     def _endpoint_for(self, model):
         view = self._admin_view_for_model(model)
@@ -184,7 +216,7 @@ def init_admin(app):
         (PhaseObjective, AdminModelView, 'Planning'),
         (PhaseWeeklyTarget, AdminModelView, 'Planning'),
         (PendingInvite, AdminModelView, 'Connections'),
-        (StravaToken, AdminModelView, 'Strava'),
+        (StravaToken, StravaTokenAdminView, 'Strava'),
         (StravaActivity, AdminModelView, 'Strava'),
     ]
     for model, view_class, category in views:

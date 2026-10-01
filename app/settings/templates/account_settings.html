@@ -16,7 +16,7 @@
     <div class="settings-grid">
         <section class="settings-panel settings-panel--profile">
             <div class="panel-heading"><div><span class="panel-kicker">Your identity</span><h2>Personal data</h2></div><i class="fas fa-id-card"></i></div>
-            <form method="post" action="{{ url_for('settings.update_profile') }}" class="row g-3">
+            <form method="post" action="{{ url_for('settings.update_profile') }}" class="row g-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-6"><label class="form-label" for="first_name">First name</label><input id="first_name" name="first_name" class="form-control" value="{{ user.first_name }}" required></div>
                 <div class="col-md-6"><label class="form-label" for="last_name">Last name</label><input id="last_name" name="last_name" class="form-control" value="{{ user.last_name }}" required></div>
                 <div class="col-12"><label class="form-label" for="email">Email address</label><input id="email" type="email" name="email" class="form-control" value="{{ user.email }}" required>{% if user.verified_email %}<div class="status-note status-note--good"><i class="fas fa-circle-check"></i> Verified email</div>{% else %}<div class="status-note status-note--warn"><i class="fas fa-triangle-exclamation"></i> Verification required</div>{% endif %}</div>
@@ -26,7 +26,7 @@
                 {% endif %}
                 <div class="col-12"><button class="btn btn-dark px-4" type="submit"><i class="fas fa-check me-2"></i>Save changes</button></div>
             </form>
-            {% if not user.verified_email %}<form method="post" action="{{ url_for('settings.send_verification') }}" class="verification-action"><button class="btn btn-outline-warning" type="submit"><i class="fas fa-envelope-circle-check me-2"></i>Verify email</button><span>We will send a fresh verification link to {{ user.email }}.</span></form>{% endif %}
+            {% if not user.verified_email %}<form method="post" action="{{ url_for('settings.send_verification') }}" class="verification-action"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline-warning" type="submit"><i class="fas fa-envelope-circle-check me-2"></i>Verify email</button><span>We will send a fresh verification link to {{ user.email }}.</span></form>{% endif %}
         </section>
 
         <aside class="settings-side">

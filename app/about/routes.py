@@ -6,6 +6,7 @@ from flask_mail import Message
 from flask_login import current_user
 
 from app import db, mail
+from app.admin.routes import is_admin_user
 from app.models import SupportMessage, SupportThread
 
 from . import about
@@ -74,7 +75,7 @@ def support():
                 current_app.logger.exception('Could not send support request')
                 flash('The support request could not be sent. Please try again later.', 'danger')
         else:
-            current_app.logger.info('Support request %s from %s: %s', thread.id, sender, message)
+            current_app.logger.info('Support request %s was stored without an email notification.', thread.id)
             flash('Your support request was recorded for review.', 'success')
         return redirect(url_for('about.support'))
 
@@ -84,7 +85,7 @@ def support():
 @about.route('/support/<int:thread_id>', methods=['GET', 'POST'])
 def support_thread(thread_id):
     thread = SupportThread.query.get_or_404(thread_id)
-    is_admin = current_user.is_authenticated and current_user.email.lower() == '1@admin.com'
+    is_admin = is_admin_user()
     if not is_admin and (not current_user.is_authenticated or thread.user_id != current_user.id):
         abort(403)
     if not is_admin and current_user.is_authenticated:

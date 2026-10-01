@@ -244,7 +244,7 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdown">
                                 <li><a class="dropdown-item" href="{{url_for('settings.settings_home')}}"><i class="fas fa-cog"></i> Settings</a></li>
-                                {% if user.email|lower == '1@admin.com' %}<li><a class="dropdown-item" href="{{ url_for('admin.index') }}"><i class="fas fa-shield-halved"></i> Admin dashboard</a></li>{% endif %}
+                                {% if is_admin_user() %}<li><a class="dropdown-item" href="{{ url_for('admin.index') }}"><i class="fas fa-shield-halved"></i> Admin dashboard</a></li>{% endif %}
                                 {% if available_athletes and available_athletes|length > 1 %}
                                 <li><h6 class="dropdown-header">Switch athlete</h6></li>
                                 {% for athlete in available_athletes %}
@@ -261,7 +261,7 @@
                                 <li><a class="dropdown-item" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                                <li><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item" type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form></li>
                             </ul>
                         </li>
                         {% else %}
@@ -304,7 +304,7 @@
                             <a class="nav-link" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{url_for('auth.logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                            <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="nav-link border-0 bg-transparent" type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form>
                         </li>
                     </ul>
                     {% else %}

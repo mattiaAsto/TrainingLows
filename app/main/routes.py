@@ -105,16 +105,6 @@ def create_week_stats_from_activities(activities):
 
 
 
-@main.route('/test')
-def test():
-
-    print(ALL_ACTIVITY_TYPES)
-
-    return jsonify("ciao")
-
-
-
-
 @main.context_processor
 def global_injection_dictionary():
 

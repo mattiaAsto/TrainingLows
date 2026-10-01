@@ -40,6 +40,7 @@ def _send_verification_email(user):
             mail.send(msg)
             return True
         except Exception:
+            current_app.logger.exception('Could not send verification email for user %s', user.id)
             return False
 
     flash(f"Verification link: {verification_url}", "info")
@@ -134,7 +135,8 @@ def register():
             db.session.add(coach_profile)
 
         db.session.commit()
-        _send_verification_email(user)
+        if not _send_verification_email(user):
+            flash('Your account was created, but the verification email could not be sent. Please try again later or contact support.', 'warning')
         return redirect(url_for('auth.verify_email', email=email))
 
     return render_template('register.html')
@@ -174,7 +176,7 @@ def verify_email_token(token):
     return redirect(url_for('auth.login'))
 
 
-@auth.route('/logout')
+@auth.route('/logout', methods=['POST'])
 def logout():
     logout_user()
     return redirect(url_for('main.home'))

@@ -2,7 +2,7 @@
 {% block body %}
 <div class="container py-4" style="max-width:900px">
     <div class="d-flex justify-content-between align-items-center mb-4"><div><h2 class="mb-1">Daily metrics</h2><p class="text-muted mb-0">Record recovery, readiness, and wellbeing.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('main.daily_metrics') }}">Back</a></div>
-    <form method="post" class="card shadow-sm"><div class="card-body"><div class="row g-3">
+    <form method="post" class="card shadow-sm"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="card-body"><div class="row g-3">
         <div class="col-md-4"><label class="form-label">Date</label><input class="form-control" type="date" name="metric_date" value="{{ metric.metric_date.isoformat() if metric else metric_date }}" required></div>
         <div class="col-md-4"><label class="form-label">Sleep duration (minutes)</label><input class="form-control" type="number" min="0" name="sleep_duration_minutes" value="{{ metric.sleep_duration_minutes if metric and metric.sleep_duration_minutes is not none else '' }}"></div>
         <div class="col-md-4"><label class="form-label">Sleep quality</label><select class="form-select" name="sleep_quality_score"><option value="">Not recorded</option>{% for score, label in quality_labels.items() %}<option value="{{ score }}" {% if metric and metric.sleep_quality_score == score %}selected{% endif %}>{{ score }} - {{ label }}</option>{% endfor %}</select></div>

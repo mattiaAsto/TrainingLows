@@ -8,8 +8,12 @@ Handles all Strava OAuth2 operations:
   - Persisting / loading tokens via SQLAlchemy
 """
 
+import hmac
+import secrets
+from urllib.parse import urlencode
+
 import requests
-from flask import current_app, url_for
+from flask import current_app, session, url_for
 
 from app import db
 from app.models import StravaToken
@@ -25,6 +29,8 @@ def build_authorization_url() -> str:
     scopes    = current_app.config["STRAVA_SCOPES"]
 
     redirect_uri = url_for('strava.callback', _external=True, _scheme=current_app.config.get('PREFERRED_URL_SCHEME', 'http'))
+    state = secrets.token_urlsafe(32)
+    session['strava_oauth_state'] = state
 
     params = {
         "client_id":       client_id,
@@ -32,9 +38,14 @@ def build_authorization_url() -> str:
         "response_type":   "code",
         "approval_prompt": "auto",
         "scope":           scopes,
+        "state":           state,
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
-    return f"{_AUTH_URL}?{query}"
+    return f"{_AUTH_URL}?{urlencode(params)}"
+
+
+def consume_oauth_state(received_state: str | None) -> bool:
+    expected_state = session.pop('strava_oauth_state', None)
+    return bool(expected_state and received_state) and hmac.compare_digest(expected_state, received_state)
 
 
 def exchange_code(code: str) -> StravaToken:

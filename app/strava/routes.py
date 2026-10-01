@@ -4,11 +4,11 @@ from datetime import datetime, timedelta, timezone
 from flask import current_app, render_template, redirect, url_for, request, session, flash, abort, jsonify
 from flask_login import current_user
 from . import strava
-from app import db
+from app import csrf, db
 from app.models import get_activity_model
 from app.models import *
 from app.activity_catalog import ACTIVITY_COLORS
-from app.strava.auth import build_authorization_url, exchange_code, get_valid_token
+from app.strava.auth import build_authorization_url, consume_oauth_state, exchange_code, get_valid_token
 from app.strava import client as strava_client
 
 
@@ -91,6 +91,7 @@ def sync_all_strava_users(app):
             try:
                 _sync_strava_activities(user)
             except Exception:
+                db.session.rollback()
                 app.logger.exception('Scheduled Strava sync failed for user %s', user.id)
 
 
@@ -119,27 +120,13 @@ def _import_strava_activity(item, athlete):
 
 
 def _get_strava_token_for_user(user):
-    """Return the active Strava token, preferring the cached user athlete ID and falling back to a single known token only when safe."""
+    """Return only the Strava token explicitly linked to this user."""
     from app.models import StravaToken
 
     athlete_id = getattr(user, "strava_athlete_id", None)
-
-    if athlete_id is not None:
-        token = StravaToken.query.filter_by(athlete_id=athlete_id).first()
-        if token is not None:
-            return token
-
-    # If the user cache is stale or missing but there is only one Strava token row in the database,
-    # repair the cache and treat that token as the active connection for this single-user setup.
-    tokens = StravaToken.query.order_by(StravaToken.id.desc()).all()
-    if len(tokens) == 1:
-        token = tokens[0]
-        if getattr(user, "strava_athlete_id", None) != token.athlete_id:
-            user.strava_athlete_id = token.athlete_id
-            db.session.commit()
-        return token
-
-    return None
+    if athlete_id is None:
+        return None
+    return StravaToken.query.filter_by(athlete_id=athlete_id).first()
 
 
 def _get_current_strava_token():
@@ -167,6 +154,9 @@ def callback():
     Strava redirects here after the athlete grants or denies access.
     Exchanges the one-time code for access + refresh tokens.
     """
+    if not consume_oauth_state(request.args.get('state')):
+        abort(400)
+
     error = request.args.get("error")
     if error:
         flash("Strava connection was denied. Please try again.", "danger")
@@ -188,13 +178,15 @@ def callback():
         # Verify the token immediately; a green popup should only appear if Strava accepts it.
         strava_client.get_athlete(token.athlete_id)
         flash("Strava account connected successfully!", "success")
-    except Exception as e:
-        flash(f"Strava connection failed during verification: {str(e)}", "danger")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Strava OAuth callback failed for user %s', current_user.id)
+        flash('Strava connection failed. Please try reconnecting later.', 'danger')
 
     return redirect(url_for("strava.settings"))
 
 
-@strava.route("/disconnect")
+@strava.route("/disconnect", methods=['POST'])
 def disconnect():
     """Remove the stored Strava token for the current athlete."""
     from app.models import StravaToken
@@ -216,9 +208,10 @@ def refresh():
     try:
         created, imported = _sync_strava_activities(current_user)
         flash(f'Strava refresh complete: {created} new activities found, {imported} imported.', 'success')
-    except Exception as error:
+    except Exception:
+        db.session.rollback()
         current_app.logger.exception('Strava refresh failed')
-        flash(f'Strava refresh failed: {error}', 'danger')
+        flash('Strava refresh failed. Please try again later.', 'danger')
     return redirect(url_for('strava.settings'))
 
 
@@ -261,11 +254,13 @@ def review_activity(item_id):
 
 
 @strava.route('/webhook', methods=['GET', 'POST'])
+@csrf.exempt
 def webhook():
     if request.method == 'GET':
         verify_token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
-        if verify_token == current_app.config.get('STRAVA_WEBHOOK_VERIFY_TOKEN'):
+        expected_token = current_app.config.get('STRAVA_WEBHOOK_VERIFY_TOKEN')
+        if expected_token and challenge and verify_token == expected_token:
             return jsonify({'hub.challenge': challenge})
         return jsonify({'error': 'Invalid verify token'}), 403
 
@@ -285,6 +280,7 @@ def webhook():
                 _import_strava_activity(item, user.athlete_profile)
             db.session.commit()
     except Exception:
+        db.session.rollback()
         current_app.logger.exception('Strava webhook processing failed')
         return jsonify({'error': 'Webhook processing failed'}), 500
     return jsonify({'status': 'accepted'}), 200
@@ -315,7 +311,7 @@ def settings():
             connected = True
         except Exception:
             # Token might be invalid — treat as disconnected.
-            print("invalid token")
+            current_app.logger.warning('Could not validate the connected Strava token for user %s.', current_user.id)
             connected = False
 
     return render_template(
