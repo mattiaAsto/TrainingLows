@@ -144,6 +144,8 @@ class AdminHomeView(AdminAccessMixin, AdminIndexView):
             try:
                 counts.append({'label': model.__name__, 'count': model.query.count(), 'endpoint': self._endpoint_for(model)})
             except Exception:
+                db.session.rollback()
+                current_app.logger.exception('Could not count rows for admin model %s', model.__name__)
                 counts.append({'label': model.__name__, 'count': '—', 'endpoint': None})
         counts.sort(key=lambda item: item['label'].lower())
         return self.render('admin/index.html', counts=counts, activity_types=list(ACTIVITY_TYPES), admin_email=ADMIN_EMAIL)

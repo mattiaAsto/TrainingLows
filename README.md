@@ -18,6 +18,9 @@ set APP_ENV=production
 python production_update.py --apply --yes
 ```
 
+Run this as a release step before starting or replacing Gunicorn workers. The WSGI app does not create or alter tables at worker startup, avoiding concurrent schema changes across workers.
+On a fresh database, register and verify the administrator account (`1@admin.com`) before opening `/admin`; Gunicorn no longer inserts a default-password account.
+
 For Render/Gunicorn, use the import-safe WSGI entrypoint as the start command:
 
 ```text

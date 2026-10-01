@@ -25,10 +25,11 @@ ROOT = Path(__file__).resolve().parent
 REQUIRED_DEFINITION_KEYS = {'label', 'color', 'unit', 'category', 'model'}
 VALID_DATATYPES = {'text', 'integer', 'float', 'boolean', 'select'}
 REQUIRED_COLUMNS = {
-    'Users': {'strava_auto_update'},
+    'Users': {'strava_auto_update', 'activity_tint_enabled'},
     'Athletes': {'self_reported_state', 'self_reported_note', 'self_reported_at'},
     'planned_activities': {'specific_data'},
     'Activities': {'specific_data'},
+    'support_threads': {'user_last_read_at'},
 }
 
 
@@ -109,7 +110,7 @@ def run(apply):
     if app_env != 'production':
         raise RuntimeError('Refusing to apply without APP_ENV=production.')
 
-    from app import create_app
+    from app import create_app, update_schema
     from app.models import get_activity_model
     from app import db
 
@@ -120,6 +121,7 @@ def run(apply):
     print(f'Backup created: {backup_path}')
 
     app = create_app()
+    update_schema(app)
     with app.app_context():
         validate_schema(app)
         for activity_type in definitions:
