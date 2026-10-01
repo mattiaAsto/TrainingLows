@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta, timezone
 
 from flask import current_app, render_template, redirect, url_for, request, session, flash, abort, jsonify
@@ -8,6 +9,7 @@ from app import csrf, db
 from app.models import get_activity_model
 from app.models import *
 from app.activity_catalog import ACTIVITY_COLORS
+from app.rate_limit import enforce_rate_limit
 from app.strava.auth import build_authorization_url, consume_oauth_state, exchange_code, get_valid_token
 from app.strava import client as strava_client
 
@@ -35,6 +37,12 @@ def _parse_strava_date(value):
     return parsed.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def _sanitize_text(value, max_length):
+    """Strip markup from third-party text so it can never be rendered as HTML."""
+    cleaned = re.sub(r'[<>`]', '', str(value or ''))
+    return cleaned[:max_length].strip()
+
+
 def _strava_activity_from_payload(payload, user_id, athlete_id):
     activity_type = payload.get('sport_type') or payload.get('type') or 'activity'
     return StravaActivity(
@@ -42,7 +50,7 @@ def _strava_activity_from_payload(payload, user_id, athlete_id):
         athlete_id=athlete_id,
         external_id=int(payload['id']),
         status='pending',
-        title=payload.get('name') or 'Strava activity',
+        title=_sanitize_text(payload.get('name'), 160) or 'Strava activity',
         activity_type=activity_type,
         started_at=_parse_strava_date(payload.get('start_date') or payload.get('start_date_local')),
         duration_seconds=payload.get('moving_time') or payload.get('elapsed_time') or 0,
@@ -99,14 +107,14 @@ def _import_strava_activity(item, athlete):
     model_cls = STRAVA_TYPE_MAP.get(item.activity_type, Activity)
     activity = model_cls(
         athlete_id=athlete.id,
-        title=item.title,
+        title=_sanitize_text(item.title, 160) or 'Strava activity',
         activity_type='activity' if model_cls is Activity else model_cls.__mapper_args__['polymorphic_identity'],
         duration_seconds=item.duration_seconds or 0,
         distance_km=item.distance_km,
         calories_burned=item.calories_burned,
         elevation_gain_m=item.elevation_gain_m,
         intensity='moderate',
-        description=f'Imported from Strava activity {item.external_id}',
+        description=f'Imported from Strava activity {int(item.external_id)}',
         date=item.started_at,
     )
     if isinstance(activity, Running):
@@ -288,13 +296,29 @@ def webhook():
     payload = request.get_json(silent=True) or {}
     if payload.get('object_type') != 'activity' or payload.get('aspect_type') not in ('create', 'update'):
         return jsonify({'status': 'ignored'})
-    user = User.query.filter_by(strava_athlete_id=payload.get('owner_id')).first()
+    enforce_rate_limit('strava-webhook', 120, 60)
+    try:
+        owner_id = int(payload.get('owner_id'))
+        object_id = int(payload.get('object_id'))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'ignored'})
+    user = User.query.filter_by(strava_athlete_id=owner_id).first()
     if user is None:
         return jsonify({'status': 'unmatched'}), 202
     try:
-        activity = strava_client.get_activity(payload['owner_id'], payload['object_id'])
-        if not StravaActivity.query.filter_by(user_id=user.id, external_id=payload['object_id']).first():
-            item = _strava_activity_from_payload(activity, user.id, payload['owner_id'])
+        activity = strava_client.get_activity(owner_id, object_id)
+        # Never import an activity that does not belong to the webhook's owner:
+        # otherwise forged events could smuggle any readable activity into a
+        # victim's inbox or, with auto-update on, straight into their log.
+        activity_athlete_id = (activity.get('athlete') or {}).get('id')
+        if activity_athlete_id != owner_id:
+            current_app.logger.warning(
+                'Strava webhook owner mismatch: event owner=%s activity athlete=%s',
+                owner_id, activity_athlete_id,
+            )
+            return jsonify({'status': 'ignored'})
+        if not StravaActivity.query.filter_by(user_id=user.id, external_id=object_id).first():
+            item = _strava_activity_from_payload(activity, user.id, owner_id)
             db.session.add(item)
             db.session.flush()
             if user.strava_auto_update and user.athlete_profile:

@@ -310,6 +310,16 @@ def create_app():
             "image": "auth_error",
         }
         return render_template("error.html", error=error), 403
+
+    @app.errorhandler(429)
+    def too_many_requests(error):
+        error = {
+            "title": "429 too many requests",
+            "code": 429,
+            "message": "Hai effettuato troppe richieste. Attendi un momento prima di riprovare.",
+            "image": "auth_error",
+        }
+        return render_template("error.html", error=error), 429
     
     
         

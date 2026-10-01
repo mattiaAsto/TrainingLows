@@ -242,6 +242,157 @@ class SecurityRegressionTests(unittest.TestCase):
         self.assertNotIn('access_token', StravaTokenAdminView.column_list)
         self.assertNotIn('refresh_token', StravaTokenAdminView.column_list)
 
+    def test_phase_color_validation_accepts_hex_only(self):
+        from app.season.routes import _valid_phase_color
+        self.assertEqual(_valid_phase_color('#198754'), '#198754')
+        self.assertEqual(_valid_phase_color('#fff'), '#fff')
+        self.assertEqual(_valid_phase_color('red'), '#6c757d')
+        self.assertEqual(_valid_phase_color('#198754"><script>'), '#6c757d')
+        self.assertEqual(_valid_phase_color(''), '#6c757d')
+        self.assertEqual(_valid_phase_color(None), '#6c757d')
+
+    def test_strava_title_sanitized_to_plain_text(self):
+        from app.strava.routes import _sanitize_text, _strava_activity_from_payload
+        self.assertEqual(_sanitize_text('<img src=x onerror=alert(1)>', 160), 'img src=x onerror=alert(1)')
+        payload = {
+            'id': 42,
+            'name': '<script>alert(1)</script>Morning Run',
+            'sport_type': 'Run',
+            'start_date': '2026-10-01T06:00:00Z',
+        }
+        item = _strava_activity_from_payload(payload, user_id=1, athlete_id=2)
+        self.assertNotIn('<', item.title)
+        self.assertNotIn('>', item.title)
+        self.assertLessEqual(len(item.title), 160)
+
+    def test_webhook_rejects_activity_of_other_athlete(self):
+        app = Flask(__name__)
+        app.config.update(
+            SECRET_KEY='test-key',
+            STRAVA_API_ACTIVE=True,
+            STRAVA_WEBHOOK_VERIFY_TOKEN='tok',
+        )
+        from app import cache, csrf
+        from app.strava import strava as strava_blueprint
+        app.register_blueprint(strava_blueprint, url_prefix='/strava')
+        csrf.init_app(app)
+        cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache'})
+        client = app.test_client()
+        with patch('app.strava.routes.User') as user_model, \
+             patch('app.strava.routes.strava_client') as strava_client:
+            user_model.query.filter_by.return_value.first.return_value = SimpleNamespace(id=7, strava_auto_update=False)
+            strava_client.get_activity.return_value = {'id': 99, 'athlete': {'id': 12345}, 'name': 'Not yours'}
+            response = client.post('/strava/webhook', json={
+                'object_type': 'activity',
+                'aspect_type': 'create',
+                'owner_id': 555,
+                'object_id': 99,
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {'status': 'ignored'})
+
+    def test_rate_limit_blocks_after_threshold(self):
+        from app import cache
+        from app.rate_limit import enforce_rate_limit
+
+        app = Flask(__name__)
+        app.config['SECRET_KEY'] = 'test-key'
+        cache.init_app(app, config={'CACHE_TYPE': 'SimpleCache'})
+
+        @app.route('/limited', methods=['POST'])
+        def limited():
+            enforce_rate_limit('test-endpoint', 2, 60)
+            return 'ok'
+
+        client = app.test_client()
+        self.assertEqual(client.post('/limited').status_code, 200)
+        self.assertEqual(client.post('/limited').status_code, 200)
+        self.assertEqual(client.post('/limited').status_code, 429)
+
+    def test_send_email_fails_closed_in_production_without_transport(self):
+        from app.email_utils import FAILED, SENT, send_email
+
+        app = Flask(__name__)
+        app.config.update(
+            SECRET_KEY='test-key',
+            BREVO_API_KEY='',
+            MAIL_SERVER='',
+            MAIL_DEFAULT_SENDER='',
+        )
+        with patch.dict(os.environ, {'APP_ENV': 'production'}):
+            with app.test_request_context('/'):
+                self.assertEqual(send_email('s', 'text', '<p>text</p>', ['a@b.com'], dev_fallback_url='https://x'), FAILED)
+        with patch.dict(os.environ, {'APP_ENV': 'development'}):
+            with app.test_request_context('/'):
+                self.assertEqual(send_email('s', 'text', '<p>text</p>', ['a@b.com'], dev_fallback_url='https://x'), SENT)
+
+    def test_register_does_not_confirm_existing_verified_account(self):
+        from app import db
+
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+        with app.app_context():
+            db.session.add(User(
+                first_name='Existing', last_name='User',
+                email='taken@example.com',
+                password=bcrypt.hashpw(b'their-password', bcrypt.gensalt()),
+                verified_email=True,
+            ))
+            db.session.commit()
+
+        client = app.test_client()
+        page = client.get('/auth/register')
+        csrf_token = re.search(rb'name="csrf_token" value="([^"]+)"', page.data).group(1).decode()
+        response = client.post('/auth/register', data={
+            'first_name': 'Mallory',
+            'last_name': 'Attacker',
+            'email': 'taken@example.com',
+            'gender': 'other',
+            'is_athlete': 'on',
+            'password': 'attacker-pass',
+            'confirm_password': 'attacker-pass',
+            'main_sport': 'running',
+            'date_of_birth': '1990-01-01',
+            'csrf_token': csrf_token,
+        }, follow_redirects=True)
+        self.assertNotIn(b'already exists', response.data)
+        self.assertNotIn(b'already verified', response.data)
+        with app.app_context():
+            # The verified account must be untouched and not duplicated.
+            users = User.query.filter_by(email='taken@example.com').all()
+            self.assertEqual(len(users), 1)
+            self.assertEqual(users[0].first_name, 'Existing')
+
+    def test_verify_email_page_does_not_reveal_verified_accounts(self):
+        from app import db
+
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+        with app.app_context():
+            db.session.add(User(
+                first_name='Existing', last_name='User',
+                email='known@example.com',
+                password=bcrypt.hashpw(b'their-password', bcrypt.gensalt()),
+                verified_email=True,
+            ))
+            db.session.commit()
+        client = app.test_client()
+        response = client.get('/auth/verify_email?email=known@example.com')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(b'already verified', response.data)
+
 
 if __name__ == '__main__':
     unittest.main()

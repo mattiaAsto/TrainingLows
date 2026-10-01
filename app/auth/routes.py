@@ -4,6 +4,7 @@ from . import auth
 from app.models import *
 from app import db
 from app.email_utils import build_verification_email, send_email
+from app.rate_limit import enforce_rate_limit
 from werkzeug.security import check_password_hash
 from sqlalchemy import func
 import os
@@ -15,6 +16,11 @@ import random
 
 def check_pw(pw):
     return len(pw) >= 8
+
+
+# Dummy hash compared against when the login email is unknown, so the response
+# time does not reveal whether an account exists for a given address.
+_DUMMY_HASH = bcrypt.hashpw(b'timing-equalizer', bcrypt.gensalt())
 
 
 def _build_verification_token(email):
@@ -49,6 +55,7 @@ def _send_verification_email(user):
 @auth.route("/login", methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        enforce_rate_limit('login', 10, 60)
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
         remember = request.form.get('remember')
@@ -57,7 +64,11 @@ def login():
             return render_template('login.html', error='Email and password are required')
 
         user = User.query.filter_by(email=email).first()
-        if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
+        password_bytes = password.encode('utf-8')
+        if user is None:
+            bcrypt.checkpw(password_bytes, _DUMMY_HASH)
+        password_ok = user is not None and bcrypt.checkpw(password_bytes, user.password)
+        if password_ok:
             if not user.is_verified:
                 flash('Please verify your email before logging in.', 'warning')
                 return redirect(url_for('auth.verify_email', email=email))
@@ -73,6 +84,7 @@ def login():
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        enforce_rate_limit('register', 5, 60)
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip().lower()
@@ -96,7 +108,9 @@ def register():
             db.session.delete(existing)
             db.session.commit()
         elif existing and existing.verified_email:
-            return render_template('register.html', error='An account with this email already exists.')
+            # Generic response: never confirm that the address is already registered.
+            flash('If that address can be registered, a verification email is on its way.', 'info')
+            return redirect(url_for('auth.verify_email', email=email))
 
         user = User(
             first_name=first_name,
@@ -146,8 +160,9 @@ def verify_email():
     email = request.args.get('email', '').strip().lower()
     user = User.query.filter_by(email=email).first() if email else None
     if user and user.verified_email:
-        flash('Your email is already verified.', 'success')
-        return redirect(url_for('auth.login'))
+        # Render the same generic page for everyone; confirming that an
+        # address is registered and verified would be an enumeration oracle.
+        user = None
 
     resend_token = _build_resend_token(email) if user else None
     return render_template('verify_email.html', email=email, user=user, resend_token=resend_token)
@@ -155,6 +170,7 @@ def verify_email():
 
 @auth.route('/verify_email/resend', methods=['POST'])
 def resend_verification_email():
+    enforce_rate_limit('resend-verification', 3, 600)
     token = request.form.get('token', '')
     email = _read_resend_token(token)
     user = User.query.filter_by(email=email).first() if email else None

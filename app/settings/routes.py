@@ -310,7 +310,8 @@ def invite_trainer():
 
     trainer = User.query.filter_by(email=trainer_email).first()
     if trainer is None or (not trainer.is_trainer and trainer.coach_profile is None):
-        flash('That account is not registered as a trainer yet.', 'warning')
+        # Generic message: do not reveal whether the address is registered.
+        flash('If that address belongs to a trainer account, the invitation will be sent.', 'info')
         return redirect(url_for('settings.roster'))
 
     if trainer.id in {coach.id for coach in current_user.athlete_profile.coaches}:
@@ -386,15 +387,19 @@ def invite_athlete():
 
     athlete_user = User.query.filter_by(email=athlete_email).first()
     if athlete_user is None or (not athlete_user.is_athlete and athlete_user.athlete_profile is None):
-        flash('That account is not registered as an athlete yet.', 'warning')
+        # Generic message: do not reveal whether the address is registered.
+        flash('If that address belongs to an athlete account, the invitation will be sent.', 'info')
         return redirect(url_for('settings.roster'))
 
     athlete_profile = athlete_user.athlete_profile
-    if athlete_profile is None or athlete_profile.date_of_birth is None:
-        flash('That athlete does not have a birthdate on their profile, so the invitation cannot be verified.', 'warning')
-        return redirect(url_for('settings.roster'))
-    if athlete_profile.date_of_birth != requested_birthdate:
-        flash('The email and birthdate do not match the athlete profile. No invitation was sent.', 'warning')
+    if (
+        athlete_profile is None
+        or athlete_profile.date_of_birth is None
+        or athlete_profile.date_of_birth != requested_birthdate
+    ):
+        # One generic failure for all cases: probing must not confirm that an
+        # email is registered or leak which birthdate is on file.
+        flash('The athlete could not be verified with the details provided. No invitation was sent.', 'warning')
         return redirect(url_for('settings.roster'))
 
     payload = {

@@ -125,6 +125,17 @@ document.addEventListener('DOMContentLoaded', function(){
         return (activityDefinitions[type] || {}).color || '#6c757d';
     }
 
+    // Escape user-controlled data before concatenating it into innerHTML.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];
+        });
+    }
+    // Only accept simple hex colors; anything else falls back to the neutral default.
+    function safeColor(value) {
+        return /^#[0-9a-fA-F]{3,8}$/.test(String(value || '')) ? value : '#6c757d';
+    }
+
     // state
     var currentWeekStart = null; // ISO YYYY-MM-DD for the Sunday's date shown
     var currentMonth = { year: null, month: null };
@@ -248,11 +259,11 @@ document.addEventListener('DOMContentLoaded', function(){
                 });
                 workouts.forEach(function(w){
                     var cls = (w.entry_type === 'planned' || w.status === 'planned') ? 'planned-entry' : 'catalog-activity-entry';
-                    var color = activityColor(w.type);
+                    var color = safeColor(activityColor(w.type));
                     var aid = (w.id!==undefined && w.id!==null) ? w.id : '';
                     var entryType = (w.entry_type || w.status || 'done');
                     html += '<div class="p-2 px-3 mb-1 rounded style-workout-strip '+cls+'" data-activity-id="'+aid+'" data-entry-type="'+entryType+'" onclick="openActivity('+aid+', \''+entryType+'\')" style="cursor:pointer;background:color-mix(in srgb, '+color+' 20%, white);border-left:3px solid '+color+';color:#27313d;">';
-                    html += '<div class="fw-bold text-truncate">'+ (w.title||w.type) +'</div>';
+                    html += '<div class="fw-bold text-truncate">'+ escapeHtml(w.title||w.type) +'</div>';
                     html += '<div class="d-flex justify-content-between mt-1 small"><span>'+ (w.distance||'') + 'k</span><span>'+ (w.time||'') +'</span></div>';
                     html += '</div>';
                 });
@@ -325,10 +336,10 @@ document.addEventListener('DOMContentLoaded', function(){
                     var total = combined.length;
                     
                     // Build activity chart with click handler to navigate to week view
-                    var tooltipText = activityList.join(', ').replace(/"/g, '&quot;');
+                    var tooltipText = escapeHtml(activityList.join(', '));
                     html += '<div class="activity-chart d-flex rounded overflow-hidden" style="height: 24px; cursor: pointer;" title="' + tooltipText + '" data-date="' + day.date + '">';
                     Object.keys(activityCounts).forEach(function(type) {
-                        var color = type === 'daily_metric' ? '#c9afe3' : activityColor(type);
+                        var color = type === 'daily_metric' ? '#c9afe3' : safeColor(activityColor(type));
                         html += '<div class="chart-segment" style="background:'+color+'; flex: ' + Math.round((activityCounts[type] / total) * 100) + '%;"></div>';
                     });
                     html += '</div>';
@@ -444,9 +455,9 @@ document.addEventListener('DOMContentLoaded', function(){
         var phases = data.phases || [];
         var objectives = data.objectives || [];
         banner.innerHTML = phases.map(function(phase){
-            return '<div class="calendar-phase-item" style="--phase-color:' + phase.color + '"><strong>' + phase.name + '</strong><span class="ms-2 text-muted">' + formatDateEU(phase.start_date) + ' to ' + formatDateEU(phase.end_date) + '</span></div>';
+            return '<div class="calendar-phase-item" style="--phase-color:' + safeColor(phase.color) + '"><strong>' + escapeHtml(phase.name) + '</strong><span class="ms-2 text-muted">' + formatDateEU(phase.start_date) + ' to ' + formatDateEU(phase.end_date) + '</span></div>';
         }).join('') + objectives.map(function(objective){
-            return '<div class="calendar-phase-item calendar-objective-item"><strong>' + objective.priority + ' objective</strong><span class="ms-2">' + objective.name + ' · ' + formatDateEU(objective.date) + '</span></div>';
+            return '<div class="calendar-phase-item calendar-objective-item"><strong>' + escapeHtml(objective.priority) + ' objective</strong><span class="ms-2">' + escapeHtml(objective.name) + ' · ' + formatDateEU(objective.date) + '</span></div>';
         }).join('');
         banner.classList.toggle('d-none', phases.length === 0 && objectives.length === 0);
     }

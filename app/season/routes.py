@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+import re
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -7,6 +8,17 @@ from app import db
 from app.models import Activity, DailyMetric, PhaseWeeklyTarget, TrainingObjective, TrainingPhase
 from . import season, selected_athlete
 from .services import get_or_create_season, suggest_phases
+
+
+# Only allow plain hex colors; free-text values would be an attribute-breakout
+# vector in templates that interpolate the color into inline styles.
+HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{3,8}$')
+DEFAULT_PHASE_COLOR = '#6c757d'
+
+
+def _valid_phase_color(value):
+    value = (value or '').strip()
+    return value if HEX_COLOR_RE.match(value) else DEFAULT_PHASE_COLOR
 
 
 @season.route('/')
@@ -217,7 +229,7 @@ def create_phase():
         phase_type='custom',
         start_date=start_date,
         end_date=end_date,
-        color=request.form.get('color', '#6c757d'),
+        color=_valid_phase_color(request.form.get('color')),
         description=request.form.get('description', '').strip() or None,
         generation_source='manual',
         is_manually_edited=True,
@@ -246,7 +258,7 @@ def edit_phase(phase_id):
             return redirect(url_for('season.edit_phase', phase_id=phase.id))
         phase.name = request.form.get('name', phase.name).strip() or phase.name
         phase.phase_type = request.form.get('phase_type', phase.phase_type)
-        phase.color = request.form.get('color', phase.color)
+        phase.color = _valid_phase_color(request.form.get('color'))
         phase.description = request.form.get('description', '').strip() or None
         phase.is_manually_edited = True
         phase.generation_source = 'manually_edited'

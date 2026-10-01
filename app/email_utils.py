@@ -12,6 +12,7 @@ signal, and text-only email with raw URLs also scores poorly.
 """
 
 import html
+import os
 import re
 
 import requests
@@ -37,8 +38,12 @@ STALE_GMAIL_SENDERS = {
 _EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
-def _is_valid_email(address):
+def is_valid_email(address):
     return bool(address) and bool(_EMAIL_RE.match(address))
+
+
+def _is_valid_email(address):
+    return is_valid_email(address)
 
 
 def _brevo_sender_address():
@@ -147,6 +152,15 @@ def send_email(subject, text_body, html_body, recipients, reply_to=None,
         return smtp_result
 
     if brevo_result == FAILED:
+        return FAILED
+
+    if os.getenv('APP_ENV', '').strip().lower() == 'production':
+        # Fail closed: a production deploy without a mail transport must never
+        # leak action URLs (verification links) into the browser.
+        current_app.logger.error(
+            'No email transport configured in production; dropping email %r to %s.',
+            subject, recipients,
+        )
         return FAILED
 
     # No transport configured: dev mode.

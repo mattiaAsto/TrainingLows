@@ -6,8 +6,9 @@ from flask_login import current_user
 
 from app import db
 from app.admin.routes import is_admin_user
-from app.email_utils import build_support_request_email, send_email
+from app.email_utils import build_support_request_email, is_valid_email, send_email
 from app.models import SupportMessage, SupportThread
+from app.rate_limit import enforce_rate_limit
 
 from . import about
 
@@ -36,9 +37,13 @@ def support():
             if any(message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at) for message in thread.messages)
         }
     if request.method == 'POST':
-        subject = (request.form.get('subject') or '').strip()
-        message = (request.form.get('message') or '').strip()
-        sender = current_user.email if current_user.is_authenticated else (request.form.get('email') or '').strip()
+        enforce_rate_limit('support-request', 6, 3600)
+        subject = (request.form.get('subject') or '').strip()[:160]
+        message = (request.form.get('message') or '').strip()[:5000]
+        sender = current_user.email if current_user.is_authenticated else (request.form.get('email') or '').strip().lower()
+        if not current_user.is_authenticated and not is_valid_email(sender):
+            flash('Please provide a valid email address.', 'warning')
+            return redirect(url_for('about.support'))
         if not subject or not message or not sender:
             flash('Please provide your email, a subject, and a message.', 'warning')
             return redirect(url_for('about.support'))
