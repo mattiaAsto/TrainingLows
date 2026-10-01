@@ -171,6 +171,8 @@ def create_app():
     app.config['STRAVA_REDIRECT_URI']  = os.getenv("STRAVA_REDIRECT_URI")
     app.config['STRAVA_SCOPES']        = os.getenv("STRAVA_SCOPES", "read,activity:read")
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
+    # Feature flag: when not truthy, every Strava route returns 404 and all Strava UI is hidden.
+    app.config['STRAVA_API_ACTIVE']    = os.getenv('STRAVA_API_ACTIVE', '').strip().lower() in {'1', 'true', 'yes', 'on'}
     preferred_url_scheme = os.getenv('PREFERRED_URL_SCHEME', 'http').lower()
     if preferred_url_scheme not in {'http', 'https'}:
         raise ValueError('PREFERRED_URL_SCHEME must be either http or https.')

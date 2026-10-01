@@ -5,4 +5,8 @@ from app.strava.routes import sync_all_strava_users
 
 
 if __name__ == '__main__':
-    sync_all_strava_users(create_app())
+    app = create_app()
+    if app.config.get('STRAVA_API_ACTIVE', False):
+        sync_all_strava_users(app)
+    else:
+        print('Strava API is disabled (STRAVA_API_ACTIVE is not truthy); skipping sync.')

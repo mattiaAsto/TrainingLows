@@ -23,6 +23,8 @@ CACHE_TYPE =
 CACHE_DEFAULT_TIMEOUT =
 
 STRAVA_WEBHOOK_VERIFY_TOKEN =
+# Set to true only while the Strava API application is active; anything else hides all Strava routes and UI.
+STRAVA_API_ACTIVE = false
 
 HOST =
 PORT =

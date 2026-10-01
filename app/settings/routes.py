@@ -136,6 +136,8 @@ def get_pending_invites_for_current_user():
 
 
 def get_pending_strava_for_current_user():
+    if not current_app.config.get('STRAVA_API_ACTIVE', False):
+        return []
     if not current_user.is_authenticated or not current_user.is_athlete:
         return []
     return StravaActivity.query.filter_by(user_id=current_user.id, status='pending').order_by(StravaActivity.started_at.desc()).limit(5).all()

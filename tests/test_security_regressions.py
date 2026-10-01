@@ -195,6 +195,7 @@ class SecurityRegressionTests(unittest.TestCase):
         app = Flask(__name__)
         app.config.update(
             SECRET_KEY='test-key',
+            STRAVA_API_ACTIVE=True,
             STRAVA_WEBHOOK_VERIFY_TOKEN='',
         )
         from app.strava import strava as strava_blueprint

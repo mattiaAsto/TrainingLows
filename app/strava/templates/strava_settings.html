@@ -204,6 +204,10 @@
 
     /* ── Alerts ── */
     .alert { border-radius: 10px; font-size: .875rem; }
+    .api-down-banner { display:flex; gap:.9rem; align-items:flex-start; margin-bottom:1.25rem; padding:1.1rem 1.25rem; border:1px solid #f0c36d; border-radius:14px; background:#fff8e8; }
+    .api-down-banner i { color:#b07d2b; font-size:1.2rem; margin-top:.15rem; flex-shrink:0; }
+    .api-down-banner h2 { margin:0 0 .35rem; font-size:1rem; font-weight:700; color:#7a5a17; }
+    .api-down-banner p { margin:0; font-size:.85rem; color:#8a6d2f; line-height:1.55; }
     .sync-panel { margin-bottom: 1.25rem; padding: 1.25rem; border: 1px solid #e8e8e8; border-radius: 14px; background: #fff; box-shadow: 0 2px 16px rgba(0,0,0,.06); }
     .sync-panel-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
     .sync-panel h2 { color:#1a1a1a; font-size:1.1rem; font-weight:700; }
@@ -223,6 +227,17 @@
     <h1 class="section-title">Strava Connection</h1>
     <p class="section-sub">Link your Strava account to automatically sync your training activities.</p>
 
+    {% if not api_active %}
+    <div class="api-down-banner">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+            <h2>Strava integration temporarily unavailable</h2>
+            <p>We're sorry — the Strava connection service is currently down for maintenance, so you can't connect a new account or sync activities right now. Any previously imported activities remain safely stored. Please check back later.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if api_active %}
     <section class="sync-panel">
         <div class="sync-panel-header">
             <div><h2>Activity sync and review</h2><p class="mb-0">Choose automatic imports or review every new Strava activity yourself.</p></div>
@@ -238,6 +253,7 @@
         </div>
         {% if pending_activities %}<div class="mt-3"><h3 class="h6 mb-2">Pending activities</h3>{% for item in pending_activities %}<div class="pending-activity"{% if user.activity_tint_enabled %} style="--activity-color: {{ activity_colors.get(item.activity_type, '#6c757d') }};"{% endif %}><div><strong>{{ item.title }}</strong><small>{{ item.started_at|date_eu(true) }} · {{ item.activity_type }} · {{ (item.distance_km or 0)|round(1) }} km</small></div><div class="d-flex gap-2"><form method="post" action="{{ url_for('strava.review_activity', item_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="decision" value="accept"><button class="btn btn-sm btn-success" type="submit">Accept</button></form><form method="post" action="{{ url_for('strava.review_activity', item_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="decision" value="reject"><button class="btn btn-sm btn-outline-danger" type="submit">Reject</button></form></div></div>{% endfor %}</div>{% else %}<p class="text-muted small mt-3 mb-0">No pending activities.</p>{% endif %}
     </section>
+    {% endif %}
 
     <div class="strava-card">
 
@@ -288,14 +304,16 @@
                 <hr class="card-divider">
 
                 <div class="d-flex gap-2 flex-wrap">
-                    <form method="post" action="{{ url_for('strava.disconnect') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-disconnect">
+                    <form method="post" action="{{ url_for('strava.disconnect') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-disconnect" {% if not api_active %}disabled title="Strava integration is temporarily unavailable"{% endif %}>
                         <i class="fa-solid fa-link-slash"></i>
                         Disconnect
                     </button></form>
+                    {% if api_active %}
                     <a href="{{ url_for('strava.connect') }}" class="btn-strava" style="background:#555; box-shadow:none;">
                         <i class="fa-solid fa-rotate-right"></i>
                         Re-authorise
                     </a>
+                    {% endif %}
                 </div>
 
             {% else %}
@@ -320,12 +338,21 @@
 
                 <hr class="card-divider">
 
+                {% if api_active %}
                 <a href="{{ url_for('strava.connect') }}" class="btn-strava">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M10 3L6.5 13H9.5L6 21M10 3L13.5 13H10.5M13.5 13L17.5 3M13.5 13L17 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     Connect with Strava
                 </a>
+                {% else %}
+                <button type="button" class="btn-strava" disabled style="opacity:.55; cursor:not-allowed; box-shadow:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M10 3L6.5 13H9.5L6 21M10 3L13.5 13H10.5M13.5 13L17.5 3M13.5 13L17 21" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Connect with Strava
+                </button>
+                {% endif %}
 
                 <div class="info-note">
                     <i class="fa-solid fa-circle-info"></i>
