@@ -2,7 +2,7 @@
 
 {% block body %}
 <div class="app-page-shell">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h2 class="mb-0" style="color:#333; font-weight:600;">Graphs & Trends</h2>
         <div class="dropdown activity-filter">
             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="activityFilterButton">All activity types</button>
@@ -18,8 +18,8 @@
         <div class="col-12 col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center">
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left">
                             <h5 class="card-title mb-0 me-3">Weekly Distance Trend</h5>
                             <div class="btn-group me-2" role="group" aria-label="graph view">
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-graph-view="week">Week</button>
@@ -29,10 +29,11 @@
                         </div>
                         <div class="graph-header-actions">
                             <button id="weeklyToggleBtn" class="btn btn-sm btn-outline-secondary" data-mode="specific">Show Total</button>
+                            <span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="weeklyDistanceChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="weeklyDistanceChart"></div></span>
                             <button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="weeklyDistanceChart" data-graph-title="Weekly Distance Trend" aria-label="Expand Weekly Distance Trend" title="Expand graph"><i class="fas fa-expand"></i></button>
                         </div>
                     </div>
-                    <div class="chart-container" style="height:260px;">
+                    <div class="chart-container" style="--chart-h:260px;">
                         <canvas id="weeklyDistanceChart"></canvas>
                     </div>
                 </div>
@@ -42,15 +43,15 @@
         <div class="col-12 col-lg-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0">Activity Distribution</h5>
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left"><h5 class="card-title mb-0">Activity Distribution</h5></div>
                         <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="activity distribution view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="activity" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="activity" data-timespan="year">Year</button>
-                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="activityDonutChart" data-graph-title="Activity Distribution" aria-label="Expand Activity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div>
+                        </div><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="activityDonutChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="activityDonutChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="activityDonutChart" data-graph-title="Activity Distribution" aria-label="Expand Activity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
-                    <div class="chart-container" style="height:260px;">
+                    <div class="chart-container" style="--chart-h:260px;">
                         <canvas id="activityDonutChart"></canvas>
                     </div>
                 </div>
@@ -60,15 +61,15 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0">Sleep & readiness</h5>
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left"><h5 class="card-title mb-0">Sleep & readiness</h5></div>
                         <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="daily metrics view">
                             <button type="button" class="btn btn-outline-secondary active" data-metrics-view="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-metrics-view="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-metrics-view="year">Year</button>
-                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailySleepChart" data-graph-title="Sleep and Readiness" aria-label="Expand Sleep and Readiness" title="Expand graph"><i class="fas fa-expand"></i></button></div>
+                        </div><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="dailySleepChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="dailySleepChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailySleepChart" data-graph-title="Sleep and Readiness" aria-label="Expand Sleep and Readiness" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
-                    <div class="chart-container" style="height:260px;"><canvas id="dailySleepChart"></canvas></div>
+                    <div class="chart-container" style="--chart-h:260px;"><canvas id="dailySleepChart"></canvas></div>
                 </div>
             </div>
         </div>
@@ -76,11 +77,11 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0">Resting HR & HRV</h5>
-                        <div class="graph-header-actions"><span class="text-muted small">daily records</span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailyVitalsChart" data-graph-title="Resting HR and HRV" aria-label="Expand Resting HR and HRV" title="Expand graph"><i class="fas fa-expand"></i></button></div>
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left"><h5 class="card-title mb-0">Resting HR & HRV</h5></div>
+                        <div class="graph-header-actions"><span class="text-muted small d-none d-sm-inline">daily records</span><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="dailyVitalsChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="dailyVitalsChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="dailyVitalsChart" data-graph-title="Resting HR and HRV" aria-label="Expand Resting HR and HRV" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
-                    <div class="chart-container" style="height:260px;"><canvas id="dailyVitalsChart"></canvas></div>
+                    <div class="chart-container" style="--chart-h:260px;"><canvas id="dailyVitalsChart"></canvas></div>
                 </div>
             </div>
         </div>
@@ -88,15 +89,15 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0">Calories by Activity Type</h5>
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left"><h5 class="card-title mb-0">Calories by Activity Type</h5></div>
                         <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="calories view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="calories" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="calories" data-timespan="year">Year</button>
-                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="caloriesBarChart" data-graph-title="Calories by Activity Type" aria-label="Expand Calories by Activity Type" title="Expand graph"><i class="fas fa-expand"></i></button></div>
+                        </div><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="caloriesBarChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="caloriesBarChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="caloriesBarChart" data-graph-title="Calories by Activity Type" aria-label="Expand Calories by Activity Type" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
-                    <div class="chart-container" style="height:220px;">
+                    <div class="chart-container" style="--chart-h:220px;">
                         <canvas id="caloriesBarChart"></canvas>
                     </div>
                 </div>
@@ -106,8 +107,8 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2"><h5 class="card-title mb-0">Intensity Distribution</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensityPolarChart" data-graph-title="Intensity Distribution" aria-label="Expand Intensity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div>
-                    <div class="chart-container" style="height:220px;">
+                    <div class="chart-card-header mb-2"><div class="chart-card-header-left"><h5 class="card-title mb-0">Intensity Distribution</h5></div><div class="graph-header-actions"><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="intensityPolarChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="intensityPolarChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensityPolarChart" data-graph-title="Intensity Distribution" aria-label="Expand Intensity Distribution" title="Expand graph"><i class="fas fa-expand"></i></button></div></div>
+                    <div class="chart-container" style="--chart-h:220px;">
                         <canvas id="intensityPolarChart"></canvas>
                     </div>
                 </div>
@@ -117,15 +118,15 @@
         <div class="col-12 col-lg-12">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="card-title mb-0">Performance Summary</h5>
+                    <div class="chart-card-header mb-2">
+                        <div class="chart-card-header-left"><h5 class="card-title mb-0">Performance Summary</h5></div>
                         <div class="graph-header-actions"><div class="btn-group btn-group-sm" role="group" aria-label="performance view">
                             <button type="button" class="btn btn-outline-secondary active" data-timespan-target="performance" data-timespan="week">Week</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="month">Month</button>
                             <button type="button" class="btn btn-outline-secondary" data-timespan-target="performance" data-timespan="year">Year</button>
-                        </div><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="performanceRadarChart" data-graph-title="Performance Summary" aria-label="Expand Performance Summary" title="Expand graph"><i class="fas fa-expand"></i></button></div>
+                        </div><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="performanceRadarChart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="performanceRadarChart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="performanceRadarChart" data-graph-title="Performance Summary" aria-label="Expand Performance Summary" title="Expand graph"><i class="fas fa-expand"></i></button></div>
                     </div>
-                    <div class="chart-container" style="height:400px;">
+                    <div class="chart-container" style="--chart-h:400px; --chart-h-sm:280px;">
                         <canvas id="performanceRadarChart"></canvas>
                     </div>
                 </div>
@@ -156,6 +157,7 @@
 
         function closeExpandedGraph() {
             if (!expandedCanvas) return;
+            const chart = chartByCanvasId(expandedCanvas.id);
             if (expandedCanvasNextSibling) expandedCanvasParent.insertBefore(expandedCanvas, expandedCanvasNextSibling);
             else expandedCanvasParent.appendChild(expandedCanvas);
             expandedCanvas = null;
@@ -164,6 +166,17 @@
             graphOverlay.classList.remove('is-open');
             graphOverlay.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('graph-overlay-open');
+            if (chart && chart.options.plugins && chart.options.plugins.legend) {
+                chart.options.plugins.legend.display = !isSmallScreen();
+                chart.resize();
+                chart.update('none');
+            }
+        }
+
+        function isSmallScreen() { return window.matchMedia('(max-width: 575.98px)').matches; }
+
+        function chartByCanvasId(id) {
+            return { weeklyDistanceChart: weeklyChart, activityDonutChart: donutChart, caloriesBarChart: caloriesBarChart, intensityPolarChart: intensityChart, performanceRadarChart: performanceChart, dailySleepChart: dailySleepChart, dailyVitalsChart: dailyVitalsChart }[id];
         }
 
         document.querySelectorAll('.graph-expand-btn').forEach(function(button) {
@@ -180,13 +193,62 @@
                 document.body.classList.add('graph-overlay-open');
                 window.setTimeout(function() {
                     if (typeof Chart === 'undefined') return;
-                    const chartByCanvas = { weeklyDistanceChart: weeklyChart, activityDonutChart: donutChart, caloriesBarChart: caloriesBarChart, intensityPolarChart: intensityChart, performanceRadarChart: performanceChart, dailySleepChart: dailySleepChart, dailyVitalsChart: dailyVitalsChart };
-                    if (chartByCanvas[button.dataset.graphTarget]) chartByCanvas[button.dataset.graphTarget].resize();
+                    const chart = chartByCanvasId(button.dataset.graphTarget);
+                    if (!chart) return;
+                    // Expanded view has room, so always show the real Chart.js legend
+                    if (chart.options.plugins && chart.options.plugins.legend) chart.options.plugins.legend.display = true;
+                    chart.resize();
+                    chart.update('none');
                 }, 50);
             });
         });
         document.querySelectorAll('[data-graph-close]').forEach(function(element) { element.addEventListener('click', closeExpandedGraph); });
         document.addEventListener('keydown', function(event) { if (event.key === 'Escape') closeExpandedGraph(); });
+
+        // Compact color-code legend popovers for small screens, where Chart.js legends eat chart space
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]; });
+        }
+        function legendOptions(extra) {
+            return Object.assign({ display: !isSmallScreen(), position: 'bottom' }, extra || {});
+        }
+        function setChartLegend(canvasId, items) {
+            const popover = document.querySelector('.chart-legend-popover[data-legend-for="' + canvasId + '"]');
+            if (!popover) return;
+            popover.innerHTML = items.length ? items.map(function(item) {
+                return '<div class="legend-item"><span class="legend-swatch" style="background:' + item.color + '"></span>' + escapeHtml(item.label) + '</div>';
+            }).join('') : '<div class="legend-item text-muted">No data</div>';
+        }
+        function closeLegendPopovers() {
+            document.querySelectorAll('.chart-legend-popover.is-open').forEach(function(p) { p.classList.remove('is-open'); });
+        }
+        document.querySelectorAll('.chart-legend-toggle').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation();
+                const popover = document.querySelector('.chart-legend-popover[data-legend-for="' + button.dataset.legendToggle + '"]');
+                if (!popover) return;
+                const wasOpen = popover.classList.contains('is-open');
+                closeLegendPopovers();
+                if (!wasOpen) popover.classList.add('is-open');
+            });
+        });
+        document.addEventListener('click', closeLegendPopovers);
+        document.addEventListener('keydown', function(event) { if (event.key === 'Escape') closeLegendPopovers(); });
+
+        let legendResizeTimer = null;
+        window.addEventListener('resize', function() {
+            clearTimeout(legendResizeTimer);
+            legendResizeTimer = setTimeout(function() {
+                if (graphOverlay.classList.contains('is-open')) return;
+                const small = isSmallScreen();
+                ['weeklyDistanceChart', 'activityDonutChart', 'caloriesBarChart', 'intensityPolarChart', 'performanceRadarChart', 'dailySleepChart', 'dailyVitalsChart'].forEach(function(id) {
+                    const chart = chartByCanvasId(id);
+                    if (!chart || !chart.options.plugins || !chart.options.plugins.legend) return;
+                    chart.options.plugins.legend.display = !small;
+                    chart.update('none');
+                });
+            }, 150);
+        });
 
         // If Chart.js is loaded by the base template, these canvases can be initialized here.
         // Example placeholder behavior: show friendly message when Chart.js missing.
@@ -303,7 +365,8 @@
                 weeklyChart.destroy();
                 weeklyChart = null;
             }
-            weeklyChart = new Chart(weeklyCtx, { type: 'line', data: { labels: labelsLocal, datasets: ds }, options: { responsive: true, maintainAspectRatio: false } });
+            weeklyChart = new Chart(weeklyCtx, { type: 'line', data: { labels: labelsLocal, datasets: ds }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendOptions() } } });
+            setChartLegend('weeklyDistanceChart', ds.map(d => ({ label: d.label, color: d.borderColor })));
             const toggleBtn = document.getElementById('weeklyToggleBtn');
             if (toggleBtn) {
                 toggleBtn.setAttribute('data-mode', 'specific');
@@ -312,8 +375,10 @@
                     const mode = this.getAttribute('data-mode') || 'specific';
                     if (mode === 'specific') {
                         weeklyChart.data.datasets = total; this.setAttribute('data-mode','total'); this.textContent='Show Activities';
+                        setChartLegend('weeklyDistanceChart', total.map(d => ({ label: d.label, color: d.borderColor })));
                     } else {
                         weeklyChart.data.datasets = ds; this.setAttribute('data-mode','specific'); this.textContent='Show Total';
+                        setChartLegend('weeklyDistanceChart', ds.map(d => ({ label: d.label, color: d.borderColor })));
                     }
                     weeklyChart.update();
                 };
@@ -328,7 +393,7 @@
                     donutChart = new Chart(donutCtx, {
                         type: 'doughnut',
                         data: { labels: labels, datasets: [{ data: values, backgroundColor: bgColors }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendOptions({ position: 'bottom' }) } }
                     });
                 } else {
                     donutChart.data.labels = labels;
@@ -336,6 +401,7 @@
                     donutChart.data.datasets[0].backgroundColor = bgColors;
                     donutChart.update();
                 }
+                setChartLegend('activityDonutChart', labels.map((label, idx) => ({ label: label, color: bgColors[idx] })));
             }
 
             function renderCaloriesBar(payload) {
@@ -346,13 +412,14 @@
                     caloriesBarChart = new Chart(caloriesBarCtx, {
                         type: 'bar',
                         data: { labels: labels, datasets: [{ label: 'Calories burned', data: values, backgroundColor: barColor }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: legendOptions() } }
                     });
                 } else {
                     caloriesBarChart.data.labels = labels;
                     caloriesBarChart.data.datasets[0].data = values;
                     caloriesBarChart.update();
                 }
+                setChartLegend('caloriesBarChart', [{ label: 'Calories burned', color: barColor }]);
             }
 
             function renderIntensityDistribution(payload) {
@@ -366,7 +433,7 @@
                     intensityChart = new Chart(intensityCtx, {
                         type: 'polarArea',
                         data: { labels: labels, datasets: [{ data: values, backgroundColor: bgColors }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendOptions({ position: 'bottom' }) } }
                     });
                 } else {
                     intensityChart.data.labels = labels;
@@ -374,6 +441,7 @@
                     intensityChart.data.datasets[0].backgroundColor = bgColors;
                     intensityChart.update();
                 }
+                setChartLegend('intensityPolarChart', labels.map((label, idx) => ({ label: label, color: bgColors[idx] })));
             }
 
             function renderPerformanceRadar(payload) {
@@ -383,13 +451,14 @@
                     performanceChart = new Chart(performanceCtx, {
                         type: 'radar',
                         data: { labels: labels, datasets: [{ label: 'Performance', data: values, borderColor: '#198754', backgroundColor: 'rgba(25,135,84,0.18)', pointBackgroundColor: '#198754' }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, ticks: { backdropColor: 'rgba(255,255,255,0.8)' } } } }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, ticks: { backdropColor: 'rgba(255,255,255,0.8)' } } }, plugins: { legend: legendOptions() } }
                     });
                 } else {
                     performanceChart.data.labels = labels;
                     performanceChart.data.datasets[0].data = values;
                     performanceChart.update();
                 }
+                setChartLegend('performanceRadarChart', [{ label: 'Performance', color: '#198754' }]);
             }
 
             function renderDailyMetrics(payload) {
@@ -402,8 +471,9 @@
                         { label: 'Readiness', data: payload.readiness || [], borderColor: '#198754', backgroundColor: '#198754', tension: .25, yAxisID: 'score' },
                         { label: 'Sleep quality', data: payload.sleep_quality || [], borderColor: '#fd7e14', backgroundColor: '#fd7e14', borderDash: [4, 3], tension: .25, yAxisID: 'score' }
                     ]},
-                    options: { responsive: true, maintainAspectRatio: false, scales: { sleep: { beginAtZero: true, position: 'left' }, score: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false } } } }
+                    options: { responsive: true, maintainAspectRatio: false, scales: { sleep: { beginAtZero: true, position: 'left' }, score: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false } } }, plugins: { legend: legendOptions() } }
                 });
+                setChartLegend('dailySleepChart', [{ label: 'Sleep (hours)', color: '#6f42c1' }, { label: 'Readiness', color: '#198754' }, { label: 'Sleep quality', color: '#fd7e14' }]);
                 if (dailyVitalsChart) dailyVitalsChart.destroy();
                 dailyVitalsChart = new Chart(document.getElementById('dailyVitalsChart').getContext('2d'), {
                     type: 'line',
@@ -411,8 +481,9 @@
                         { label: 'Resting HR', data: payload.resting_hr || [], borderColor: '#dc3545', backgroundColor: '#dc3545', tension: .25, yAxisID: 'hr' },
                         { label: 'HRV (ms)', data: payload.hrv_ms || [], borderColor: '#0d6efd', backgroundColor: '#0d6efd', tension: .25, yAxisID: 'hrv' }
                     ]},
-                    options: { responsive: true, maintainAspectRatio: false, scales: { hr: { beginAtZero: false, position: 'left' }, hrv: { beginAtZero: false, position: 'right', grid: { drawOnChartArea: false } } } }
+                    options: { responsive: true, maintainAspectRatio: false, scales: { hr: { beginAtZero: false, position: 'left' }, hrv: { beginAtZero: false, position: 'right', grid: { drawOnChartArea: false } } }, plugins: { legend: legendOptions() } }
                 });
+                setChartLegend('dailyVitalsChart', [{ label: 'Resting HR', color: '#dc3545' }, { label: 'HRV (ms)', color: '#0d6efd' }]);
             }
 
             function fetchJson(url, callback) {
@@ -544,9 +615,35 @@
 {% block styles %}
 <style>
     :root{ --accent: #dc3545; }
-    .chart-container { background: #fff; border-radius:10px; padding:8px; }
+    .chart-container { background: #fff; border-radius:10px; padding:8px; height:var(--chart-h, 260px); }
     .graph-header-actions { display:flex; align-items:center; gap:.45rem; }
-    .graph-expand-btn { display:inline-grid; width:30px; height:30px; padding:0; place-items:center; }
+    .graph-expand-btn { display:inline-grid; width:30px; height:30px; padding:0; place-items:center; flex:0 0 auto; }
+    .chart-card-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; row-gap:.5rem; column-gap:.75rem; }
+    .chart-card-header-left { display:flex; flex-wrap:wrap; align-items:center; row-gap:.4rem; column-gap:.5rem; min-width:0; }
+    .chart-card-header-left h5 { white-space:nowrap; }
+    .chart-legend-wrap { position:relative; display:inline-flex; flex:0 0 auto; }
+    .chart-legend-toggle { display:none; width:30px; height:30px; padding:0; place-items:center; flex:0 0 auto; }
+
+    /* Small-device overrides: stack header rows, shrink touch targets, shorten charts */
+    @media (max-width: 575.98px) {
+        .chart-container { height: var(--chart-h-sm, 220px); }
+        .chart-card-header-left,
+        .graph-header-actions { flex: 1 1 100%; justify-content: space-between; }
+        .chart-card-header-left h5 { font-size: 1rem; white-space:normal; }
+        .chart-card-header .btn-group,
+        .graph-header-actions .btn-group { flex: 1 1 auto; display:flex; }
+        .chart-card-header .btn-group .btn,
+        .graph-header-actions .btn-group .btn { flex: 1 1 0; padding:.25rem .3rem; font-size:.72rem; }
+        #weeklyToggleBtn { flex:1 1 auto; font-size:.75rem; }
+        .activity-filter { width: 100%; }
+        .activity-filter .dropdown-toggle { width: 100%; }
+        .activity-filter .dropdown-menu { width: 100%; max-width: calc(100vw - 2.5rem); }
+        .chart-legend-toggle { display:inline-grid; }
+    }
+    .chart-legend-popover { display:none; position:absolute; top:calc(100% + .4rem); right:0; z-index:30; min-width:170px; max-width:min(260px, calc(100vw - 2.5rem)); max-height:220px; overflow-y:auto; padding:.5rem .65rem; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 10px 26px rgba(0,0,0,.14); }
+    .chart-legend-popover.is-open { display:block; }
+    .chart-legend-popover .legend-item { display:flex; align-items:center; gap:.5rem; padding:.2rem 0; font-size:.78rem; color:#333; white-space:nowrap; }
+    .chart-legend-popover .legend-swatch { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
     .graph-overlay { display:none; position:fixed; inset:0; z-index:1080; }
     .graph-overlay.is-open { display:block; }
     .graph-overlay-backdrop { position:absolute; inset:0; background:rgba(17,27,25,.72); backdrop-filter:blur(4px); }

@@ -86,6 +86,17 @@
     .type-dot { display: inline-block; width: 9px; height: 9px; margin-right: .45rem; border-radius: 50%; }
     .type-running { background: #dc3545; } .type-cycling { background: #198754; }
     .type-swimming { background: #0d6efd; } .type-strength { background: #fd7e14; }
+
+    /* Small-device overrides: shorter charts, full-width range toggle, compact KPI text */
+    @media (max-width: 575.98px) {
+        .analysis-chart { height: 220px; }
+        .analysis-chart-short { height: 180px; }
+        .analysis-kpi, .analysis-detail { padding: .85rem .9rem; }
+        .analysis-kpi strong, .analysis-detail strong { font-size: 1.2rem; }
+        .analysis-page .btn-group[aria-label="Analysis time range"] { display:flex; width:100%; }
+        .analysis-page .btn-group[aria-label="Analysis time range"] .btn { flex:1 1 0; font-size:.78rem; padding:.3rem .25rem; }
+        .analysis-chart-heading h5 { font-size: 1rem; }
+    }
 </style>
 {% endblock %}
 
@@ -176,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
             model: { position: 'right', beginAtZero: false, grid: { drawOnChartArea: false }, title: { display: true, text: 'CTL / ATL / Form' } },
             recovery: { position: 'left', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Sleep / readiness' } },
             vitals: { position: 'right', beginAtZero: false, grid: { drawOnChartArea: false }, title: { display: true, text: 'HR / HRV' } }
-        }} });
+        }, plugins: { legend: { position: 'bottom' } } } });
 
         const intensity = data.intensity || [];
         replaceChart('intensity', { type: 'doughnut', data: { labels: intensity.map(i => i.label), datasets: [{ data: intensity.map(i => i.minutes), backgroundColor: ['#74c0fc', '#ffc107', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
