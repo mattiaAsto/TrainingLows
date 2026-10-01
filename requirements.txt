@@ -22,6 +22,7 @@ bcrypt==4.2.0
 # Integrations
 requests==2.32.3
 python-dotenv==1.0.1
+tzdata==2026.4
 
 # Development and deployment
 livereload==2.7.1

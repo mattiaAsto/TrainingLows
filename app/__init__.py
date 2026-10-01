@@ -263,6 +263,7 @@ def create_app():
 
     @app.errorhandler(500)
     def page_not_found(error):
+        db.session.rollback()
         error ={
             "title": "500 internal error",
             "code": 500,
