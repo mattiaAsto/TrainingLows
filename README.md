@@ -18,6 +18,9 @@ set APP_ENV=production
 python production_update.py --apply --yes
 ```
 
+Run this as a release step before starting or replacing Gunicorn workers. The WSGI app does not create or alter tables at worker startup, avoiding concurrent schema changes across workers.
+On a fresh database, register and verify the administrator account (`1@admin.com`) before opening `/admin`; Gunicorn no longer inserts a default-password account.
+
 For Render/Gunicorn, use the import-safe WSGI entrypoint as the start command:
 
 ```text
@@ -26,4 +29,4 @@ gunicorn --bind 0.0.0.0:$PORT wsgi:app
 
 `wsgi.py` imports only the application factory. It never imports the local seed logic from `run.py`.
 
-The update routine validates `activity_definitions.json`, creates a timestamped backup in `backups/`, starts the application schema updater, validates required columns, and confirms that catalog activity models load. It does not seed data or drop tables. The database backup must succeed before schema work begins.
+The update routine validates `activity_definitions.json`, creates a timestamped backup in `backups/` with `mysqldump` or `pg_dump`, starts the application schema updater, validates required columns, and confirms that catalog activity models load. It does not seed data or drop tables. The database backup must succeed before schema work begins.

@@ -1,4 +1,4 @@
-from app import create_app, db
+from app import create_app, db, update_schema
 from datetime import datetime, timezone
 from livereload import Server
 import os
@@ -32,6 +32,7 @@ if __name__ == '__main__' and os.getenv('APP_ENV', '').lower() == 'production':
 app = create_app()
 
 if __name__ == '__main__' and use_debug and not db_dropping:
+    update_schema(app)
     print('Debug mode without database reset.')
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)

@@ -25,10 +25,11 @@ ROOT = Path(__file__).resolve().parent
 REQUIRED_DEFINITION_KEYS = {'label', 'color', 'unit', 'category', 'model'}
 VALID_DATATYPES = {'text', 'integer', 'float', 'boolean', 'select'}
 REQUIRED_COLUMNS = {
-    'Users': {'strava_auto_update'},
+    'Users': {'strava_auto_update', 'activity_tint_enabled'},
     'Athletes': {'self_reported_state', 'self_reported_note', 'self_reported_at'},
     'planned_activities': {'specific_data'},
     'Activities': {'specific_data'},
+    'support_threads': {'user_last_read_at'},
 }
 
 
@@ -58,6 +59,31 @@ def backup_database(url, backup_dir):
         source = Path(url.database).resolve()
         destination = backup_dir / f'traininglows-{timestamp}.sqlite'
         shutil.copy2(source, destination)
+        return destination
+    if url.drivername.split('+', 1)[0] in {'postgres', 'postgresql'}:
+        destination = backup_dir / f'traininglows-{timestamp}.dump'
+        command = [
+            'pg_dump', '--format=custom', '--no-owner', '--no-privileges',
+            '--host', url.host or 'localhost',
+            '--port', str(url.port or 5432),
+            '--username', url.username or '',
+            '--file', str(destination),
+            '--dbname', url.database or '',
+        ]
+        environment = os.environ.copy()
+        if url.password:
+            environment['PGPASSWORD'] = url.password
+        for option in ('sslmode', 'sslrootcert', 'sslcert', 'sslkey'):
+            value = url.query.get(option)
+            if value:
+                environment[f'PG{option.upper()}'] = str(value)
+        try:
+            subprocess.run(command, check=True, env=environment, capture_output=True, text=True)
+        except FileNotFoundError as error:
+            raise RuntimeError('pg_dump was not found. Install the PostgreSQL client or create a verified backup before using --apply.') from error
+        except subprocess.CalledProcessError as error:
+            detail = (error.stderr or '').strip()
+            raise RuntimeError(f'Database backup failed: {detail or "pg_dump returned an error"}') from error
         return destination
     if url.drivername not in {'mysql', 'mysql+pymysql'}:
         raise RuntimeError(f'Automatic backups are not implemented for {url.drivername}.')
@@ -109,7 +135,7 @@ def run(apply):
     if app_env != 'production':
         raise RuntimeError('Refusing to apply without APP_ENV=production.')
 
-    from app import create_app
+    from app import create_app, update_schema
     from app.models import get_activity_model
     from app import db
 
@@ -120,6 +146,7 @@ def run(apply):
     print(f'Backup created: {backup_path}')
 
     app = create_app()
+    update_schema(app)
     with app.app_context():
         validate_schema(app)
         for activity_type in definitions:

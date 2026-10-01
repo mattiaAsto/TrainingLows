@@ -25,6 +25,38 @@ cache = Cache()
 #admin_panel = Admin(name='FantaCO Admin', template_mode='bootstrap3', index_view=AdminHomeView())
 
 
+def update_schema(app):
+    with app.app_context():
+        try:
+            db.create_all()
+            users_columns = {column['name'] for column in inspect(db.engine).get_columns('Users')}
+            if 'strava_auto_update' not in users_columns:
+                db.session.execute(text("ALTER TABLE Users ADD COLUMN strava_auto_update BOOLEAN NOT NULL DEFAULT 0"))
+            if 'activity_tint_enabled' not in users_columns:
+                db.session.execute(text("ALTER TABLE Users ADD COLUMN activity_tint_enabled BOOLEAN NOT NULL DEFAULT 1"))
+            athletes_columns = {column['name'] for column in inspect(db.engine).get_columns('Athletes')}
+            if 'self_reported_state' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_state VARCHAR(30) NOT NULL DEFAULT 'ready'"))
+            if 'self_reported_note' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_note TEXT NULL"))
+            if 'self_reported_at' not in athletes_columns:
+                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_at DATETIME NULL"))
+            planned_columns = {column['name'] for column in inspect(db.engine).get_columns('planned_activities')}
+            if 'specific_data' not in planned_columns:
+                db.session.execute(text("ALTER TABLE planned_activities ADD COLUMN specific_data JSON NULL"))
+            activity_columns = {column['name'] for column in inspect(db.engine).get_columns('Activities')}
+            if 'specific_data' not in activity_columns:
+                db.session.execute(text("ALTER TABLE Activities ADD COLUMN specific_data JSON NULL"))
+            support_thread_columns = {column['name'] for column in inspect(db.engine).get_columns('support_threads')}
+            if 'user_last_read_at' not in support_thread_columns:
+                db.session.execute(text("ALTER TABLE support_threads ADD COLUMN user_last_read_at DATETIME NULL"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Could not update the database schema')
+            raise
+
+
 def create_app():
 
     app=Flask(__name__)
@@ -51,10 +83,12 @@ def create_app():
     db_port = os.getenv("DB_PORT")
     db_name = os.getenv("DB_NAME")
 
-    db_complete_url = os.getenv("DB_COMPLETE_URL", None)
+    db_complete_url = os.getenv("DB_COMPLETE_URL") or os.getenv("DATABASE_URL")
 
     if not db_complete_url:
         db_complete_url = f'mysql+pymysql://{db_user}:{db_password}@{db_hostname}:3306/{db_name}'
+    elif db_complete_url.startswith('postgres://'):
+        db_complete_url = 'postgresql://' + db_complete_url[len('postgres://'):]
 
     mail_server = str(os.getenv("MAIL_SERVER"))
     mail_port = int(os.getenv("MAIL_PORT"))
@@ -73,17 +107,14 @@ def create_app():
     # Sqalchemy configs --> pakage used to interact with an sql database (mysql in local)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_complete_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_POOL_SIZE'] = 10
-    app.config['SQLALCHEMY_POOL_TIMEOUT'] = 5  
-    app.config['SQLALCHEMY_POOL_RECYCLE'] = 3600 
-    # Tells SQLAlchemy to test connections for freshness before executing a query
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,     # Automatically reconnects if PostgreSQL dropped the SSL socket
-        "pool_recycle": 300,       # Recycles idle connections every 5 minutes (300s)
-        "pool_timeout": 30,        # Aborts stuck query connections after 30 seconds
-        "max_overflow": 10,
-    }
-    #app.config[SQLALCHEMY_ENGINE_OPTIONS]
+    engine_options = {'pool_pre_ping': True, 'pool_recycle': 300}
+    if not db_complete_url.startswith('sqlite:'):
+        engine_options.update({
+            'pool_size': 10,
+            'pool_timeout': 30,
+            'max_overflow': 10,
+        })
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
     # Flask-Mail configs
     app.config['MAIL_SERVER'] = mail_server   # Server SMTP (es. Gmail: smtp.gmail.com)
@@ -145,39 +176,6 @@ def create_app():
                 if message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at)
             )
         return {'support_unread_count': unread_count}
-
-    with app.app_context():
-        try:
-            db.create_all()
-            users_columns = {column['name'] for column in inspect(db.engine).get_columns('Users')}
-            if 'strava_auto_update' not in users_columns:
-                db.session.execute(text("ALTER TABLE Users ADD COLUMN strava_auto_update BOOLEAN NOT NULL DEFAULT 0"))
-                db.session.commit()
-            if 'activity_tint_enabled' not in users_columns:
-                db.session.execute(text("ALTER TABLE Users ADD COLUMN activity_tint_enabled BOOLEAN NOT NULL DEFAULT 1"))
-            athletes_columns = {column['name'] for column in inspect(db.engine).get_columns('Athletes')}
-            if 'self_reported_state' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_state VARCHAR(30) NOT NULL DEFAULT 'ready'"))
-            if 'self_reported_note' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_note TEXT NULL"))
-            if 'self_reported_at' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_at DATETIME NULL"))
-            planned_columns = {column['name'] for column in inspect(db.engine).get_columns('planned_activities')}
-            if 'specific_data' not in planned_columns:
-                db.session.execute(text("ALTER TABLE planned_activities ADD COLUMN specific_data JSON NULL"))
-            activity_columns = {column['name'] for column in inspect(db.engine).get_columns('Activities')}
-            if 'specific_data' not in activity_columns:
-                db.session.execute(text("ALTER TABLE Activities ADD COLUMN specific_data JSON NULL"))
-            support_thread_columns = {column['name'] for column in inspect(db.engine).get_columns('support_threads')}
-            if 'user_last_read_at' not in support_thread_columns:
-                db.session.execute(text("ALTER TABLE support_threads ADD COLUMN user_last_read_at DATETIME NULL"))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            app.logger.exception('Could not initialize the Strava sync schema')
-
-
-    
 
     """ Adding the tables to the admin panel
     admin_panel.add_view(ArticleView(Article, db.session))
