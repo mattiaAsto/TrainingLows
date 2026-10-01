@@ -257,7 +257,9 @@
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
                                 {% endif %}
+                                {% if config.get('STRAVA_API_ACTIVE') %}
                                 <li><a class="dropdown-item" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -294,9 +296,11 @@
                             {% endfor %}
                         </li>
                         {% endif %}
+                        {% if config.get('STRAVA_API_ACTIVE') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a>
                         </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a>
                         </li>
