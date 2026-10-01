@@ -5,23 +5,21 @@ from flask_login import UserMixin, LoginManager, login_user, current_user
 from flask_caching import Cache
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_wtf.csrf import CSRFProtect
 from itsdangerous import URLSafeTimedSerializer
-from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from distutils.util import strtobool
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import datetime
 #from app.admin.routes import AdminHomeView
-import atexit
 import os
-from pathlib import Path
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import URL, make_url
 
 
 db = SQLAlchemy()
 mail = Mail()
 login_manager = LoginManager()
 cache = Cache()
+csrf = CSRFProtect()
 #admin_panel = Admin(name='FantaCO Admin', template_mode='bootstrap3', index_view=AdminHomeView())
 
 
@@ -86,29 +84,61 @@ def create_app():
     db_complete_url = os.getenv("DB_COMPLETE_URL") or os.getenv("DATABASE_URL")
 
     if not db_complete_url:
-        db_complete_url = f'mysql+pymysql://{db_user}:{db_password}@{db_hostname}:3306/{db_name}'
+        missing_db_settings = [
+            name for name, value in {
+                'DB_USER': db_user,
+                'DB_PASSWORD': db_password,
+                'DB_HOSTNAME': db_hostname,
+                'DB_NAME': db_name,
+            }.items() if not value
+        ]
+        if missing_db_settings:
+            raise RuntimeError(
+                'Configure DB_COMPLETE_URL/DATABASE_URL or provide: '
+                + ', '.join(missing_db_settings)
+            )
+        try:
+            db_port_number = int(db_port or 3306)
+        except ValueError as error:
+            raise RuntimeError('DB_PORT must be a valid integer.') from error
+        db_complete_url = URL.create(
+            'mysql+pymysql',
+            username=db_user,
+            password=db_password,
+            host=db_hostname,
+            port=db_port_number,
+            database=db_name,
+        )
     elif db_complete_url.startswith('postgres://'):
         db_complete_url = 'postgresql://' + db_complete_url[len('postgres://'):]
 
-    mail_server = str(os.getenv("MAIL_SERVER"))
-    mail_port = int(os.getenv("MAIL_PORT"))
+    mail_server = os.getenv('MAIL_SERVER', '').strip()
+    try:
+        mail_port = int(os.getenv('MAIL_PORT', '587'))
+    except ValueError as error:
+        raise RuntimeError('MAIL_PORT must be a valid integer.') from error
     mail_use_tls = True
     mail_use_ssl = False
-    mail_username = str(os.getenv("MAIL_USERNAME"))
-    mail_password = str(os.getenv("MAIL_PASSWORD"))
-    mail_default_sender = str(os.getenv("MAIL_DEFAULT_SENDER"))
+    mail_username = os.getenv('MAIL_USERNAME', '')
+    mail_password = os.getenv('MAIL_PASSWORD', '')
+    mail_default_sender = os.getenv('MAIL_DEFAULT_SENDER', '')
 
     secret_key = os.getenv("SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError('SECRET_KEY must be configured.')
 
-    cache_type = os.getenv("CACHE_TYPE")
-    cache_default_timeout = int(os.getenv("CACHE_DEFAULT_TIMEOUT"))
+    cache_type = os.getenv('CACHE_TYPE', 'SimpleCache')
+    try:
+        cache_default_timeout = int(os.getenv('CACHE_DEFAULT_TIMEOUT', '60'))
+    except ValueError as error:
+        raise RuntimeError('CACHE_DEFAULT_TIMEOUT must be a valid integer.') from error
 
 
     # Sqalchemy configs --> pakage used to interact with an sql database (mysql in local)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_complete_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     engine_options = {'pool_pre_ping': True, 'pool_recycle': 300}
-    if not db_complete_url.startswith('sqlite:'):
+    if make_url(db_complete_url).get_backend_name() != 'sqlite':
         engine_options.update({
             'pool_size': 10,
             'pool_timeout': 30,
@@ -127,6 +157,7 @@ def create_app():
 
     # Secret key for Flask security config
     app.config['SECRET_KEY'] = secret_key
+    app.config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', '').strip().lower()
 
     app.url_serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
@@ -140,8 +171,16 @@ def create_app():
     app.config['STRAVA_REDIRECT_URI']  = os.getenv("STRAVA_REDIRECT_URI")
     app.config['STRAVA_SCOPES']        = os.getenv("STRAVA_SCOPES", "read,activity:read")
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
-    app.config['STRAVA_SYNC_ENABLED'] = os.getenv('STRAVA_SYNC_ENABLED', '1') == '1'
-    app.config['PREFERRED_URL_SCHEME'] = os.getenv('PREFERRED_URL_SCHEME', 'http')
+    preferred_url_scheme = os.getenv('PREFERRED_URL_SCHEME', 'http').lower()
+    if preferred_url_scheme not in {'http', 'https'}:
+        raise ValueError('PREFERRED_URL_SCHEME must be either http or https.')
+    app.config['PREFERRED_URL_SCHEME'] = preferred_url_scheme
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SECURE'] = preferred_url_scheme == 'https'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SECURE'] = preferred_url_scheme == 'https'
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
     app.config['BUY_ME_A_COFFEE_URL'] = os.getenv('BUY_ME_A_COFFEE_URL', '').strip()
 
     #init Flask-Mail
@@ -152,12 +191,13 @@ def create_app():
 
     #init Flask-Login
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     #init Flask-Cache
     cache.init_app(app)
 
     #init admin panel feature
-    from app.admin.routes import init_admin
+    from app.admin.routes import init_admin, is_admin_user
     init_admin(app)
 
     # Import tables as classes from the models.py file
@@ -175,7 +215,7 @@ def create_app():
                 for message in thread.messages
                 if message.is_admin and (thread.user_last_read_at is None or message.created_at > thread.user_last_read_at)
             )
-        return {'support_unread_count': unread_count}
+        return {'support_unread_count': unread_count, 'is_admin_user': is_admin_user}
 
     """ Adding the tables to the admin panel
     admin_panel.add_view(ArticleView(Article, db.session))
@@ -205,23 +245,7 @@ def create_app():
     app.register_blueprint(settings_blueprint, url_prefix='/settings')
     app.register_blueprint(about_blueprint, url_prefix='/about')
 
-    if app.config['STRAVA_SYNC_ENABLED']:
-        from app.strava.routes import sync_all_strava_users
-        scheduler = BackgroundScheduler(daemon=True)
-        scheduler.add_job(
-            lambda: sync_all_strava_users(app),
-            trigger='interval',
-            hours=6,
-            id='strava-fallback-sync',
-            replace_existing=True,
-        )
-        scheduler.start()
-        app.extensions['strava_scheduler'] = scheduler
-        atexit.register(lambda: scheduler.shutdown(wait=False))
-
-
-    # Database creation is intentionally handled from run.py so Flask's debug reloader
-    # does not trigger concurrent DDL on MySQL when the app restarts in development.
+    # Schema changes run through the explicit local or production updater, never on worker startup.
     login_manager.login_view="auth.login"
 
     # Structure needed to use "current_user"

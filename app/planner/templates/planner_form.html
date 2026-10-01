@@ -103,7 +103,7 @@
                         <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-secondary">Back</a>
                     </div>
 
-                    <form method="post" class="planner-form">
+                    <form method="post" class="planner-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Entry type</label>
@@ -188,7 +188,7 @@
                     </form>
 
                     {% if is_edit %}
-                    <form id="delete-form" method="post" action="{{ url_for('planner.delete_entry', entry_type=entry_type, entry_id=entry.id) }}" style="display:none;"></form>
+                    <form id="delete-form" method="post" action="{{ url_for('planner.delete_entry', entry_type=entry_type, entry_id=entry.id) }}" style="display:none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
                     {% endif %}
                 </div>
             </div>

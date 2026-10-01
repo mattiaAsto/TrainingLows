@@ -18,7 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import inspect
+from sqlalchemy.exc import ArgumentError
 from sqlalchemy.engine import make_url
+from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parent
@@ -124,6 +126,7 @@ def check_catalog_models(definitions):
 
 
 def run(apply):
+    load_dotenv()
     definitions = load_catalog()
     check_catalog_models(definitions) if apply else None
     if not apply:
@@ -139,9 +142,13 @@ def run(apply):
     from app.models import get_activity_model
     from app import db
 
-    url = make_url(os.getenv('DB_COMPLETE_URL') or os.getenv('DATABASE_URL', ''))
-    if not url.drivername:
+    database_url = os.getenv('DB_COMPLETE_URL') or os.getenv('DATABASE_URL')
+    if not database_url:
         raise RuntimeError('DB_COMPLETE_URL or DATABASE_URL must be configured.')
+    try:
+        url = make_url(database_url)
+    except ArgumentError as error:
+        raise RuntimeError('DB_COMPLETE_URL or DATABASE_URL must be a valid SQLAlchemy URL.') from error
     backup_path = backup_database(url, ROOT / 'backups')
     print(f'Backup created: {backup_path}')
 

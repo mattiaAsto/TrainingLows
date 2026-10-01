@@ -9,7 +9,7 @@
         </div>
         <div>
             <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-secondary">Back to Calendar</a>
-            <form method="post" action="{{ url_for('main.delete_activity', activity_id=activity.id) }}" class="d-inline" onsubmit="return confirm('Delete this activity permanently? This action cannot be undone.');">
+            <form method="post" action="{{ url_for('main.delete_activity', activity_id=activity.id) }}" class="d-inline" onsubmit="return confirm('Delete this activity permanently? This action cannot be undone.');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger">Delete activity</button>
             </form>
         </div>

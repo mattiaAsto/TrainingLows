@@ -29,6 +29,16 @@ def _decode_invite_token(token, salt_name='settings-link-token'):
         return None
 
 
+def _get_pending_link_invite(token, kind, from_user_id, to_user_id):
+    return PendingInvite.query.filter_by(
+        token=token,
+        kind=kind,
+        from_user_id=from_user_id,
+        to_user_id=to_user_id,
+        status='pending',
+    ).first()
+
+
 def _encode_invite_token(payload, salt_name='settings-link-token'):
     return current_app.url_serializer.dumps(payload, salt=salt_name)
 
@@ -277,8 +287,11 @@ def send_verification():
         flash('Your email address is already verified.', 'info')
         return redirect(url_for('settings.settings_home'))
 
-    _send_verification_email(current_user)
-    flash('A new verification email has been sent.', 'success')
+    sent = _send_verification_email(current_user)
+    flash(
+        'A new verification email has been sent.' if sent else 'The verification email could not be sent. Please try again later or contact support.',
+        'success' if sent else 'warning',
+    )
     return redirect(url_for('settings.settings_home'))
 
 
@@ -457,19 +470,22 @@ def confirm_trainer_link(token):
         flash('This invitation is intended for the trainer account only.', 'warning')
         return redirect(url_for('settings.settings_home'))
 
+    pending_record = _get_pending_link_invite(token, 'trainer_link', athlete.id, trainer.id)
+    if pending_record is None:
+        flash('This trainer link is no longer pending.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
     if request.method == 'POST':
         decision = (request.form.get('decision') or '').lower()
         if decision == 'decline':
-            pending_record = PendingInvite.query.filter_by(token=token).first()
-            if pending_record:
-                pending_record.status = 'declined'
-                db.session.commit()
+            pending_record.status = 'declined'
+            db.session.commit()
             flash(f'You declined the link with {athlete.user.first_name} {athlete.user.last_name}.', 'info')
             return redirect(url_for('settings.settings_home'))
+        if decision != 'accept':
+            abort(400)
 
-        pending_record = PendingInvite.query.filter_by(token=token).first()
-        if pending_record:
-            pending_record.status = 'accepted'
+        pending_record.status = 'accepted'
 
         coach_profile = _ensure_trainer_profile_for_user(current_user)
         athlete_profile = _ensure_athlete_profile_for_user(athlete.user)
@@ -513,19 +529,22 @@ def confirm_athlete_link(token):
         flash('This invitation is intended for the athlete account only.', 'warning')
         return redirect(url_for('settings.settings_home'))
 
+    pending_record = _get_pending_link_invite(token, 'athlete_link', coach_user.id, athlete_user.id)
+    if pending_record is None:
+        flash('This athlete link is no longer pending.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
     if request.method == 'POST':
         decision = (request.form.get('decision') or '').lower()
         if decision == 'decline':
-            pending_record = PendingInvite.query.filter_by(token=token).first()
-            if pending_record:
-                pending_record.status = 'declined'
-                db.session.commit()
+            pending_record.status = 'declined'
+            db.session.commit()
             flash(f'You declined the link with {coach_user.first_name} {coach_user.last_name}.', 'info')
             return redirect(url_for('settings.settings_home'))
+        if decision != 'accept':
+            abort(400)
 
-        pending_record = PendingInvite.query.filter_by(token=token).first()
-        if pending_record:
-            pending_record.status = 'accepted'
+        pending_record.status = 'accepted'
 
         athlete_profile = _ensure_athlete_profile_for_user(current_user)
         if payload.get('date_of_birth'):
@@ -554,43 +573,9 @@ def confirm_athlete_link(token):
 
 @settings.route('/athlete/add', methods=['GET', 'POST'])
 def add_athlete():
-    if not current_user.is_trainer and not current_user.is_athlete:
-        abort(403)
-
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        sport = request.form.get('sport', '').strip() or 'running'
-        dob = request.form.get('date_of_birth', '')
-
-        if not email:
-            flash('Please provide an athlete email.', 'warning')
-            return redirect(url_for('settings.roster'))
-
-        user = User.query.filter_by(email=email).first()
-        if user is None:
-            flash('No account was found for that email. Ask the athlete to register first.', 'warning')
-            return redirect(url_for('settings.roster'))
-
-        athlete = user.athlete_profile
-        if athlete is None:
-            athlete = Athlete(
-                id=user.id,
-                sport=sport,
-                date_of_birth=datetime.strptime(dob, '%Y-%m-%d').date() if dob else None,
-            )
-            db.session.add(athlete)
-            db.session.flush()
-
-        if current_user.is_trainer and current_user.coach_profile:
-            if athlete not in current_user.coach_profile.athletes:
-                current_user.coach_profile.athletes.append(athlete)
-
-        db.session.commit()
-        session['selected_athlete_id'] = athlete.id
-        flash(f'{user.first_name} {user.last_name} is now linked as an athlete.', 'success')
-        return redirect(url_for('settings.roster'))
-
-    return redirect(url_for('settings.settings_home'))
+        flash('Athletes must accept an invitation before joining a trainer roster.', 'warning')
+    return redirect(url_for('settings.roster'))
 
 
 @settings.route('/athlete/<int:athlete_id>/calendar')
