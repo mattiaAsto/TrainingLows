@@ -1,5 +1,6 @@
 from app import db
 from app.activity_catalog import ACTIVITY_DEFINITIONS, ACTIVITY_TYPES
+from app.crypto import decrypt_value, encrypt_value
 from flask_login import UserMixin
 from sqlalchemy.types import LargeBinary, JSON
 from datetime import datetime
@@ -14,19 +15,37 @@ CoachAthlete = db.Table("CoachAthlete",
 
 
 class StravaToken(db.Model):
-    """Stores per-athlete OAuth tokens."""
+    """Stores per-athlete OAuth tokens (encrypted at rest)."""
 
     __tablename__ = "strava_tokens"
 
     id            = db.Column(db.Integer, primary_key=True)
     athlete_id    = db.Column(db.BigInteger, unique=True, nullable=False, index=True)
-    access_token  = db.Column(db.String(255), nullable=False)
-    refresh_token = db.Column(db.String(255), nullable=False)
+    _access_token  = db.Column('access_token', db.String(255), nullable=False)
+    _refresh_token = db.Column('refresh_token', db.String(255), nullable=False)
     expires_at    = db.Column(db.BigInteger, nullable=False)   # Unix timestamp
     scope         = db.Column(db.String(255), nullable=True)
     created_at    = db.Column(db.DateTime, server_default=db.func.now())
     updated_at    = db.Column(db.DateTime, server_default=db.func.now(),
                               onupdate=db.func.now())
+
+    # ── Transparent encryption ───────────────────────────────────────────────
+
+    @property
+    def access_token(self) -> str:
+        return decrypt_value(self._access_token)
+
+    @access_token.setter
+    def access_token(self, value: str) -> None:
+        self._access_token = encrypt_value(value)
+
+    @property
+    def refresh_token(self) -> str:
+        return decrypt_value(self._refresh_token)
+
+    @refresh_token.setter
+    def refresh_token(self, value: str) -> None:
+        self._refresh_token = encrypt_value(value)
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 

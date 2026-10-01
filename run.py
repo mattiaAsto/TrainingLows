@@ -39,7 +39,9 @@ if __name__ == '__main__' and use_debug and not db_dropping:
     app.run(host=os.getenv('HOST', '127.0.0.1'), port=int(os.getenv('PORT', 5500)), debug=False, use_reloader=False)
     raise SystemExit(0)
 
-admin_password = str(os.getenv("ADMIN_PASSWORD", "1"))            
+admin_password = os.getenv("ADMIN_PASSWORD", "").strip()
+if not admin_password:
+    raise RuntimeError('ADMIN_PASSWORD must be set in .env before seeding the development database.')
 hashed_password=bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
 
 admin = User(

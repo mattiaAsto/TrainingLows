@@ -393,6 +393,139 @@ class SecurityRegressionTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(b'already verified', response.data)
 
+    def test_strava_tokens_are_encrypted_at_rest(self):
+        from app import db
+        from app.models import StravaToken
+        from sqlalchemy import text
+
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+        with app.app_context():
+            token = StravaToken(athlete_id=123456)
+            token.update_from_response({
+                'access_token': 'plain-access-token-value',
+                'refresh_token': 'plain-refresh-token-value',
+                'expires_at': 4102444800,
+            })
+            db.session.add(token)
+            db.session.commit()
+            raw_access, raw_refresh = db.session.execute(
+                text('SELECT access_token, refresh_token FROM strava_tokens')
+            ).one()
+            self.assertNotIn('plain-access', raw_access)
+            self.assertNotIn('plain-refresh', raw_refresh)
+            self.assertEqual(token.access_token, 'plain-access-token-value')
+            self.assertEqual(token.refresh_token, 'plain-refresh-token-value')
+
+    def test_stored_token_fails_closed_with_wrong_secret_key(self):
+        from app import db
+        from app.crypto import TokenDecryptionError
+        from app.models import StravaToken
+
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+        with app.app_context():
+            token = StravaToken(athlete_id=999)
+            token.update_from_response({
+                'access_token': 'some-access-token',
+                'refresh_token': 'some-refresh-token',
+                'expires_at': 4102444800,
+            })
+            db.session.add(token)
+            db.session.commit()
+
+        # The encryption key derives from SECRET_KEY; rotating it must make old
+        # ciphertext unreadable (fail closed, never return garbage).
+        with app.app_context():
+            stored = StravaToken.query.filter_by(athlete_id=999).one()
+            app.config['SECRET_KEY'] = 'rotated-key'
+            with self.assertRaises(TokenDecryptionError):
+                _ = stored.access_token
+
+    def test_security_headers_are_set(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+        response = app.test_client().get('/auth/login')
+        self.assertEqual(response.headers.get('X-Frame-Options'), 'DENY')
+        self.assertEqual(response.headers.get('X-Content-Type-Options'), 'nosniff')
+        csp = response.headers.get('Content-Security-Policy', '')
+        self.assertIn("default-src 'self'", csp)
+        self.assertIn("frame-ancestors 'none'", csp)
+
+    def test_production_defaults_to_https_scheme(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+            'APP_ENV': 'production',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+        self.assertEqual(app.config['PREFERRED_URL_SCHEME'], 'https')
+        self.assertTrue(app.config['SESSION_COOKIE_SECURE'])
+
+    def test_password_policy_bounds_match_bcrypt_limit(self):
+        from app.auth.routes import check_pw
+        self.assertFalse(check_pw(''))
+        self.assertFalse(check_pw('a' * 7))
+        self.assertTrue(check_pw('a' * 8))
+        self.assertTrue(check_pw('a' * 72))
+        self.assertFalse(check_pw('a' * 73))
+        self.assertFalse(check_pw('é' * 40))  # 80 bytes once encoded
+
+    def test_login_clears_preexisting_session_state(self):
+        from app import db
+
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+            update_schema(app)
+        with app.app_context():
+            db.session.add(User(
+                first_name='Session', last_name='User',
+                email='session@example.com',
+                password=bcrypt.hashpw(b'their-password', bcrypt.gensalt()),
+                verified_email=True,
+            ))
+            db.session.commit()
+
+        client = app.test_client()
+        with client.session_transaction() as sess:
+            sess['selected_athlete_id'] = 5
+            sess['strava_oauth_state'] = 'stale-state'
+        login_page = client.get('/auth/login')
+        csrf_token = re.search(rb'name="csrf_token" value="([^"]+)"', login_page.data).group(1).decode()
+        response = client.post('/auth/login', data={
+            'email': 'session@example.com',
+            'password': 'their-password',
+            'csrf_token': csrf_token,
+        })
+        self.assertEqual(response.status_code, 302)
+        with client.session_transaction() as sess:
+            self.assertNotIn('selected_athlete_id', sess)
+            self.assertNotIn('strava_oauth_state', sess)
+
 
 if __name__ == '__main__':
     unittest.main()

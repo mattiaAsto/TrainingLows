@@ -1,3 +1,4 @@
+import hmac
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -289,7 +290,8 @@ def webhook():
         verify_token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
         expected_token = current_app.config.get('STRAVA_WEBHOOK_VERIFY_TOKEN')
-        if expected_token and challenge and verify_token == expected_token:
+        token_matches = bool(verify_token and expected_token) and hmac.compare_digest(verify_token, expected_token)
+        if token_matches and challenge:
             return jsonify({'hub.challenge': challenge})
         return jsonify({'error': 'Invalid verify token'}), 403
 

@@ -180,7 +180,13 @@ def create_app():
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
     # Feature flag: when not truthy, every Strava route returns 404 and all Strava UI is hidden.
     app.config['STRAVA_API_ACTIVE']    = os.getenv('STRAVA_API_ACTIVE', '').strip().lower() in {'1', 'true', 'yes', 'on'}
-    preferred_url_scheme = os.getenv('PREFERRED_URL_SCHEME', 'http').lower()
+    app_env = os.getenv('APP_ENV', '').strip().lower()
+    # Fail safer: production deploys default to https (secure cookies, https
+    # OAuth redirect URIs); local development keeps the http default.
+    preferred_url_scheme = os.getenv(
+        'PREFERRED_URL_SCHEME',
+        'https' if app_env == 'production' else 'http',
+    ).lower()
     if preferred_url_scheme not in {'http', 'https'}:
         raise ValueError('PREFERRED_URL_SCHEME must be either http or https.')
     app.config['PREFERRED_URL_SCHEME'] = preferred_url_scheme
@@ -256,6 +262,26 @@ def create_app():
 
     # Schema changes run through the explicit local or production updater, never on worker startup.
     login_manager.login_view="auth.login"
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        # Templates rely on inline <script> blocks and onclick handlers, so
+        # script-src keeps 'unsafe-inline'; styles are inline everywhere too.
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+        return response
 
     # Structure needed to use "current_user"
     from .models import User

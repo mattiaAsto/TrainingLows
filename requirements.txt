@@ -18,6 +18,7 @@ Flask-Mail==0.10.0
 Flask-Caching==2.3.0
 Flask-WTF==1.2.2
 bcrypt==4.2.0
+cryptography==43.0.3
 
 # Integrations
 requests==2.32.5

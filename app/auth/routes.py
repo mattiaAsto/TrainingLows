@@ -15,7 +15,9 @@ import random
 
 
 def check_pw(pw):
-    return len(pw) >= 8
+    # bcrypt only uses the first 72 bytes; longer inputs would be silently
+    # truncated, so reject them instead of pretending they are distinct.
+    return bool(pw) and len(pw) >= 8 and len(pw.encode('utf-8')) <= 72
 
 
 # Dummy hash compared against when the login email is unknown, so the response
@@ -72,6 +74,9 @@ def login():
             if not user.is_verified:
                 flash('Please verify your email before logging in.', 'warning')
                 return redirect(url_for('auth.verify_email', email=email))
+            # Drop any anonymous-session state (selected athlete, stale OAuth
+            # state, ...) before establishing the authenticated session.
+            session.clear()
             login_user(user, remember=bool(remember))
             flash(f'Welcome back, {user.first_name}!', 'success')
             return redirect(url_for('main.home'))
@@ -99,7 +104,7 @@ def register():
         if not first_name or not last_name or not email or not gender:
             return render_template('register.html', error='Please complete all required fields.')
         if not check_pw(password):
-            return render_template('register.html', error='Password must be at least 8 characters long')
+            return render_template('register.html', error='Password must be between 8 and 72 characters long')
         if password != confirm_password:
             return render_template('register.html', error='Passwords do not match')
 
