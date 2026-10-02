@@ -239,6 +239,11 @@
     </div>
     <div id="main-wrapper">
         <!-- Header Navigation -->
+        {% if not user.is_authenticated %}
+        <nav class="navbar px-3 py-2" style="background:#fff; border-bottom:1px solid #e8eaed;">
+            <div class="container-fluid"><a class="navbar-brand fw-semibold" href="/"><i class="fas fa-person-running text-danger me-2"></i>{{ app_name }}</a><div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('about.about_home') }}">About</a><a class="btn btn-sm" style="background:#27313d; color:#fff; border:0;" href="{{ url_for('auth.login') }}">Sign in</a><a class="btn btn-outline-danger btn-sm" href="{{ url_for('auth.register') }}">Register</a></div></div>
+        </nav>
+        {% else %}
         <nav class="navbar navbar-expand-md navbar-light bg-light justify-content-between" style="padding-left: 10px; padding-right: 10px;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="{{url_for('main.home')}}">
@@ -359,6 +364,7 @@
                 </div>
             </div>
         </nav>
+        {% endif %}
         <!-- End Header Navigation -->
 
         <!-- Main Content Area -->
