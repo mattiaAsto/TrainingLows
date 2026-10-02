@@ -188,9 +188,11 @@ def send_email(subject, text_body, html_body, recipients, reply_to=None,
         current_app.logger.error('No valid recipients for email %r', subject)
         return FAILED
 
-    current_app.logger.info(
-        'Attempting to send email %r to %s from %s',
+    # Force ERROR level so it always shows in production logs
+    current_app.logger.error(
+        'DEBUG: Attempting to send email %r to %s from %s. MAIL_SERVER=%s, BREVO=%s',
         subject, recipients, sender or current_app.config.get('MAIL_DEFAULT_SENDER'),
+        current_app.config.get('MAIL_SERVER'), bool(current_app.config.get('BREVO_API_KEY')),
     )
 
     brevo_result = _send_via_brevo(subject, text_body, html_body, recipients, reply_to, sender=sender)
