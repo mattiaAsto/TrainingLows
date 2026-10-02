@@ -584,11 +584,18 @@ def api_calendar_phases():
     except ValueError:
         start_date = date.today() - timedelta(days=6)
         end_date = date.today()
-    phases = TrainingPhase.query.join(TrainingSeason).filter(
+
+    # The phase banner is a status indicator, not a view of the browsed range,
+    # so it always shows just the current phase plus the next upcoming one
+    # regardless of which week/month/year the calendar is displaying.
+    today = date.today()
+    all_phases = TrainingPhase.query.join(TrainingSeason).filter(
         TrainingSeason.athlete_id == athlete_id,
-        TrainingPhase.start_date <= end_date,
-        TrainingPhase.end_date >= start_date,
     ).order_by(TrainingPhase.start_date.asc()).all()
+    current_phase = next((p for p in all_phases if p.start_date <= today <= p.end_date), None)
+    upcoming_phase = next((p for p in all_phases if p.start_date > today), None)
+    phases = [p for p in (current_phase, upcoming_phase) if p is not None]
+
     objectives = TrainingObjective.query.join(TrainingSeason).filter(
         TrainingSeason.athlete_id == athlete_id,
         TrainingObjective.event_date >= start_date,
@@ -602,6 +609,7 @@ def api_calendar_phases():
         'end_date': phase.end_date.isoformat(),
         'color': phase.color,
         'description': phase.description,
+        'status': 'current' if phase is current_phase else 'upcoming',
     } for phase in phases], 'objectives': [{
         'id': objective.id,
         'name': objective.name,

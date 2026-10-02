@@ -19,7 +19,8 @@
         <div>
             <button class="btn btn-white border" id="nav-prev" data-prev-week="{{ prev_week|default('') }}" data-prev-month="{{ prev_month|default('') }}" data-prev-year="{{ prev_year|default('') }}"><i class="fas fa-chevron-left text-muted"></i></button>
         </div>
-        <div>
+        <div class="text-center">
+            <div class="fw-semibold mb-1" id="calendar-period-label" style="font-size:15px; color:#333;">&nbsp;</div>
             <div class="btn-group" role="group" aria-label="calendar view">
                 <button type="button" class="btn btn-outline-secondary" data-view="week">Week</button>
                 <button type="button" class="btn btn-outline-secondary" data-view="month">Month</button>
@@ -56,6 +57,7 @@
     .daily-metrics-log { font-size: 14px; padding: .5rem .8rem; }
     .calendar-phase-banner { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; }
     .calendar-phase-item { padding: .45rem .75rem; border-left: 4px solid var(--phase-color); border-radius: 6px; background: color-mix(in srgb, var(--phase-color) 14%, white); color: #27313d; font-size: .85rem; }
+    .calendar-phase-status-badge { background: var(--phase-color); color: #fff; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; vertical-align: middle; }
     .calendar-objective-item { --phase-color: #dc3545; border-left-color: #dc3545; background: #fff5f5; }
     .bg-running { background: linear-gradient(90deg,var(--accent),var(--accent-2)) !important; }
     .bg-cycling { background: linear-gradient(90deg,#28a745,#66d88a) !important; }
@@ -136,6 +138,36 @@ document.addEventListener('DOMContentLoaded', function(){
         return /^#[0-9a-fA-F]{3,8}$/.test(String(value || '')) ? value : '#6c757d';
     }
 
+    var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var periodLabelEl = document.getElementById('calendar-period-label');
+
+    function setPeriodLabel(text) {
+        if (periodLabelEl) periodLabelEl.textContent = text || '\u00a0';
+    }
+
+    function weekPeriodLabel(startIso, endIso) {
+        var start = new Date(startIso + 'T00:00:00');
+        var end = new Date(endIso + 'T00:00:00');
+        var startDay = start.getDate(), endDay = end.getDate();
+        var startMonth = MONTH_NAMES[start.getMonth()], endMonth = MONTH_NAMES[end.getMonth()];
+        var startYear = start.getFullYear(), endYear = end.getFullYear();
+        if (startYear !== endYear) {
+            return startDay + ' ' + startMonth + ' ' + startYear + ' \u2013 ' + endDay + ' ' + endMonth + ' ' + endYear;
+        }
+        if (startMonth !== endMonth) {
+            return startDay + ' ' + startMonth + ' \u2013 ' + endDay + ' ' + endMonth + ' ' + startYear;
+        }
+        return startDay + ' \u2013 ' + endDay + ' ' + startMonth + ' ' + startYear;
+    }
+
+    function monthPeriodLabel(year, month) {
+        return MONTH_NAMES[(month || 1) - 1] + ' ' + year;
+    }
+
+    function yearPeriodLabel(year) {
+        return String(year);
+    }
+
     // state
     var currentWeekStart = null; // ISO YYYY-MM-DD for the Sunday's date shown
     var currentMonth = { year: null, month: null };
@@ -202,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     function fetchWeek(start_iso, direction){
-        calendar_info.textContent = 'Current week summary and weekly details';
+        calendar_info.textContent = 'Weekly training summary';
 
         var container = document.getElementById('view-week');
         var outClass = null, inClass = null;
@@ -229,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderWeek(data){
         if (!data || !data.week_days) return;
         currentWeekStart = data.week_days[0].date;
+        setPeriodLabel(weekPeriodLabel(data.week_days[0].date, data.week_days[6].date));
         var container = document.getElementById('view-week');
         if (!container) return;
         var html = '<div class="row row-cols-1 row-cols-md-7 g-2 mb-4">';
@@ -277,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function fetchMonth(year, month, direction){
-                calendar_info.textContent = 'Current week summary and montly details';
+                calendar_info.textContent = 'Monthly training summary';
 
 
         var container = document.getElementById('view-month');
@@ -304,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderMonth(data){
         if (!data) return;
         currentMonth.year = data.year; currentMonth.month = data.month;
+        setPeriodLabel(monthPeriodLabel(data.year, data.month));
         var container = document.getElementById('view-month');
         if (!container) return;
         var html = '<div class="card mb-4 shadow-sm"><div class="card-body p-3"><div class="table-responsive"><table class="table table-borderless calendar-month-table">';
@@ -376,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function fetchYear(year, direction){
-        calendar_info.textContent = 'Current week summary and yearly details';
+        calendar_info.textContent = 'Yearly training summary';
 
 
         var container = document.getElementById('view-year');
@@ -400,6 +434,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderYear(data){
         if (!data) return;
         currentYear = data.year;
+        setPeriodLabel(yearPeriodLabel(data.year));
         var container = document.getElementById('view-year');
         if (!container) return;
         var months = data.months || [];
@@ -454,8 +489,11 @@ document.addEventListener('DOMContentLoaded', function(){
         if (!banner) return;
         var phases = data.phases || [];
         var objectives = data.objectives || [];
+        var statusLabels = { current: 'Current', upcoming: 'Upcoming' };
         banner.innerHTML = phases.map(function(phase){
-            return '<div class="calendar-phase-item" style="--phase-color:' + safeColor(phase.color) + '"><strong>' + escapeHtml(phase.name) + '</strong><span class="ms-2 text-muted">' + formatDateEU(phase.start_date) + ' to ' + formatDateEU(phase.end_date) + '</span></div>';
+            var statusLabel = statusLabels[phase.status] || '';
+            var badge = statusLabel ? '<span class="badge calendar-phase-status-badge ms-2">' + statusLabel + '</span>' : '';
+            return '<div class="calendar-phase-item" style="--phase-color:' + safeColor(phase.color) + '"><strong>' + escapeHtml(phase.name) + '</strong>' + badge + '<span class="ms-2 text-muted">' + formatDateEU(phase.start_date) + ' to ' + formatDateEU(phase.end_date) + '</span></div>';
         }).join('') + objectives.map(function(objective){
             return '<div class="calendar-phase-item calendar-objective-item"><strong>' + escapeHtml(objective.priority) + ' objective</strong><span class="ms-2">' + escapeHtml(objective.name) + ' · ' + formatDateEU(objective.date) + '</span></div>';
         }).join('');
