@@ -4,20 +4,31 @@ GLOBAL__PASSWORD =
 
 DB_COMPLETE_URL =
 
-MAIL_SERVER =
-MAIL_PORT =
-MAIL_USE_TLS =
-MAIL_USE_SSL =
-MAIL_USERNAME =
-MAIL_PASSWORD =
-MAIL_DEFAULT_SENDER =
-# Display name used in the From header.
+MAIL_SERVER = smtp.example.com
+MAIL_PORT = 587
+MAIL_USE_TLS = True
+MAIL_USE_SSL = False
+
+# Transactional mailbox (verification, invitations, notifications)
+MAIL_TRANSACTIONAL_SENDER = service@yourdomain.ch
+MAIL_SERVICE_USERNAME = service@yourdomain.ch
+MAIL_SERVICE_PASSWORD = your-service-password
+
+# Support mailbox (bug reports, admin replies)
+MAIL_SUPPORT_EMAIL = support@yourdomain.ch
+MAIL_SUPPORT_USERNAME = support@yourdomain.ch
+MAIL_SUPPORT_PASSWORD = your-support-password
+
+# Fallback for legacy code (usually same as transactional)
+MAIL_DEFAULT_SENDER = service@yourdomain.ch
+MAIL_USERNAME = service@yourdomain.ch
+MAIL_PASSWORD = your-service-password
+
+# Display name in From header
 MAIL_SENDER_NAME = TrainingLows
-# Transactional email via Brevo HTTP API (preferred; takes priority over SMTP).
-# Create a free account at brevo.com (300 emails/day) and generate an API key.
+# Optional: Brevo HTTP API key (takes priority over SMTP if set)
+# With a custom domain + proper DNS records, direct SMTP works fine
 BREVO_API_KEY =
-# Inbox that receives support request notifications; defaults to MAIL_DEFAULT_SENDER.
-MAIL_SUPPORT_EMAIL =
 
 SECRET_KEY =
 # Admin login email; it need not receive email. Defaults to 1@admin.com.

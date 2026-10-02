@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, session, flash, jsonify, abort
+from flask import current_app, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from . import main
 from app.models import *
 from app import db
@@ -116,6 +116,21 @@ def global_injection_dictionary():
         "activity_colors": ACTIVITY_COLORS,
         "activity_labels": ACTIVITY_LABELS,
     }
+
+# In app/main/routes.py or any blueprint
+@main.route('/debug-mail-config')
+def debug_mail_config():
+    if not current_app.config.get('DEBUG'):
+        abort(404)
+    return jsonify({
+        'MAIL_SERVER': current_app.config.get('MAIL_SERVER'),
+        'MAIL_PORT': current_app.config.get('MAIL_PORT'),
+        'MAIL_TRANSACTIONAL_SENDER': current_app.config.get('MAIL_TRANSACTIONAL_SENDER'),
+        'MAIL_SUPPORT_EMAIL': current_app.config.get('MAIL_SUPPORT_EMAIL'),
+        'has_service_password': bool(current_app.config.get('MAIL_CREDENTIALS', {}).get('service', {}).get('password')),
+        'has_support_password': bool(current_app.config.get('MAIL_CREDENTIALS', {}).get('support', {}).get('password')),
+        'BREVO_API_KEY_set': bool(current_app.config.get('BREVO_API_KEY')),
+    })
 
 
 @main.route("/")

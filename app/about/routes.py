@@ -74,6 +74,7 @@ def support():
                 html_body,
                 recipients=[recipient],
                 reply_to=sender,
+                sender=recipient,  # Support emails come from support@
             )
             if result != 'failed':
                 flash('Your support request was sent. You can follow the discussion below.', 'success')

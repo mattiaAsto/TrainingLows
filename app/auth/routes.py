@@ -51,6 +51,7 @@ def _send_verification_email(user):
         html_body,
         recipients=[user.email],
         dev_fallback_url=verification_url,
+        sender=current_app.config.get('MAIL_TRANSACTIONAL_SENDER'),
     )
 
 

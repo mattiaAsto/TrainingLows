@@ -124,9 +124,16 @@ def create_app():
         raise RuntimeError('MAIL_PORT must be a valid integer.') from error
     mail_use_tls = True
     mail_use_ssl = False
+    # Legacy single-account config (for backwards compatibility)
     mail_username = os.getenv('MAIL_USERNAME', '')
     mail_password = os.getenv('MAIL_PASSWORD', '')
     mail_default_sender = os.getenv('MAIL_DEFAULT_SENDER', '')
+    
+    # Per-mailbox SMTP credentials (custom domain setup)
+    mail_service_username = os.getenv('MAIL_SERVICE_USERNAME', mail_username)
+    mail_service_password = os.getenv('MAIL_SERVICE_PASSWORD', mail_password)
+    mail_support_username = os.getenv('MAIL_SUPPORT_USERNAME', mail_username)
+    mail_support_password = os.getenv('MAIL_SUPPORT_PASSWORD', mail_password)
 
     secret_key = os.getenv("SECRET_KEY")
     if not secret_key:
@@ -160,12 +167,30 @@ def create_app():
     app.config['MAIL_PASSWORD'] = mail_password         # Password per l'autenticazione
     app.config['MAIL_DEFAULT_SENDER'] = mail_default_sender  # Mittente predefinito (opzionale)
     app.config['MAIL_SENDER_NAME'] = os.getenv('MAIL_SENDER_NAME', app_name)
-    # Brevo HTTP API key; when set it takes priority over SMTP for transactional email.
-    app.config['BREVO_API_KEY'] = os.getenv('BREVO_API_KEY', '').strip()
-    # Inbox that receives support request notifications; defaults to the sender address.
+    # Transactional email sender (verification, invitations, notifications)
+    app.config['MAIL_TRANSACTIONAL_SENDER'] = (
+        os.getenv('MAIL_TRANSACTIONAL_SENDER', '').strip() or mail_default_sender
+    )
+    # Support inbox: sends replies to users and receives support notifications
     app.config['MAIL_SUPPORT_EMAIL'] = (
         os.getenv('MAIL_SUPPORT_EMAIL', '').strip() or mail_default_sender
     )
+    # Per-mailbox SMTP credentials
+    app.config['MAIL_CREDENTIALS'] = {
+        'service': {
+            'username': mail_service_username,
+            'password': mail_service_password,
+            'sender': app.config['MAIL_TRANSACTIONAL_SENDER'],
+        },
+        'support': {
+            'username': mail_support_username,
+            'password': mail_support_password,
+            'sender': app.config['MAIL_SUPPORT_EMAIL'],
+        },
+    }
+    # Brevo HTTP API key; when set it takes priority over SMTP for transactional email.
+    # With a custom domain, Brevo is optional — direct SMTP from your provider works too.
+    app.config['BREVO_API_KEY'] = os.getenv('BREVO_API_KEY', '').strip()
 
     # Secret key for Flask security config
     app.config['SECRET_KEY'] = secret_key

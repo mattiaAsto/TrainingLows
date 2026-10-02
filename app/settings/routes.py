@@ -64,6 +64,7 @@ def _send_invitation_email(recipient, recipient_name, sender_name, invite_url, i
         text_body,
         html_body,
         recipients=[recipient],
+        sender=current_app.config.get('MAIL_TRANSACTIONAL_SENDER'),
     )
 
 
@@ -77,6 +78,7 @@ def _send_verification_email(user):
         html_body,
         recipients=[user.email],
         dev_fallback_url=verification_url,
+        sender=current_app.config.get('MAIL_TRANSACTIONAL_SENDER'),
     )
 
 

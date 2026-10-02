@@ -152,6 +152,7 @@ class SupportAdminView(AdminAccessMixin, BaseView):
                     text_body,
                     html_body,
                     recipients=[thread.requester_email],
+                    sender=current_app.config.get('MAIL_SUPPORT_EMAIL'),
                 )
             return redirect(url_for('.thread', thread_id=thread.id))
         return self.render('admin/support/thread.html', thread=thread)

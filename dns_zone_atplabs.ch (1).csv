@@ -1,0 +1,14 @@
+atplabs.ch.	900	IN	A	216.24.57.1
+atplabs.ch.	900	IN	MX	10 mx.swizzonic.email.
+atplabs.ch.	900	IN	NS	dns1.swizzonic.ch.
+atplabs.ch.	900	IN	NS	dns2.swizzonic.ch.
+atplabs.ch.	900	IN	SOA	dns1.swizzonic.ch. hostmaster.swizzonic.ch. 2026100203 10800 3600 604800 86400
+atplabs.ch.	900	IN	TXT	"v=spf1 a mx include:spf.webapps.net include:controlpanel.pro ~all"
+autoconfig.atplabs.ch.	900	IN	CNAME	tb-ch.securemail.pro.
+imap.atplabs.ch.	900	IN	CNAME	imap.swizzonic.email.
+key-swiz001._domainkey.atplabs.ch.	900	IN	CNAME	key-swiz001._domainkey.securemail.pro.
+key-swiz002._domainkey.atplabs.ch.	900	IN	CNAME	key-swiz002._domainkey.securemail.pro.
+pop.atplabs.ch.	900	IN	CNAME	pop.swizzonic.email.
+smtp.atplabs.ch.	900	IN	CNAME	smtp.swizzonic.email.
+www.atplabs.ch.	900	IN	CNAME	traininglows.onrender.com.
+_autodiscover._tcp.atplabs.ch.	900	IN	SRV	10 10 443 ms-ch.securemail.pro.
