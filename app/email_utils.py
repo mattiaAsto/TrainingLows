@@ -17,7 +17,7 @@ import re
 
 import requests
 from flask import current_app, flash
-from flask_mail import Message
+from flask_mail import Mail, Message
 
 from app import mail
 
@@ -63,12 +63,12 @@ def _brevo_sender_address():
     return sender
 
 
-def _send_via_brevo(subject, text_body, html_body, recipients, reply_to=None):
+def _send_via_brevo(subject, text_body, html_body, recipients, reply_to=None, sender=None):
     api_key = (current_app.config.get('BREVO_API_KEY') or '').strip()
     if not api_key:
         return None
 
-    sender_address = _brevo_sender_address()
+    sender_address = sender or _brevo_sender_address()
     sender_name = (current_app.config.get('MAIL_SENDER_NAME') or _app_name()).strip()
     payload = {
         'sender': {'name': sender_name, 'email': sender_address},
@@ -101,13 +101,32 @@ def _send_via_brevo(subject, text_body, html_body, recipients, reply_to=None):
     return FAILED
 
 
-def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None):
+def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None, sender=None):
     if not current_app.config.get('MAIL_SERVER'):
         return None
 
-    sender = (current_app.config.get('MAIL_DEFAULT_SENDER') or '').strip()
+    sender = sender or (current_app.config.get('MAIL_DEFAULT_SENDER') or '').strip()
     if not sender:
         return None
+
+    # Pick credentials based on sender address
+    credentials = current_app.config.get('MAIL_CREDENTIALS', {})
+    service_creds = credentials.get('service', {})
+    support_creds = credentials.get('support', {})
+    
+    username = None
+    password = None
+    if sender == service_creds.get('sender'):
+        username = service_creds.get('username')
+        password = service_creds.get('password')
+    elif sender == support_creds.get('sender'):
+        username = support_creds.get('username')
+        password = support_creds.get('password')
+    
+    # Fallback to legacy single-account config if no specific credentials found
+    if not username:
+        username = current_app.config.get('MAIL_USERNAME', '')
+        password = current_app.config.get('MAIL_PASSWORD', '')
 
     message = Message(
         subject=subject,
@@ -120,7 +139,31 @@ def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None):
         message.reply_to = reply_to
 
     try:
-        mail.send(message)
+        # Use smtplib directly for thread-safe per-message credentials
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = ', '.join(recipients)
+        if reply_to:
+            msg['Reply-To'] = reply_to
+        
+        msg.attach(MIMEText(text_body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        server = current_app.config.get('MAIL_SERVER')
+        port = current_app.config.get('MAIL_PORT', 587)
+        use_tls = current_app.config.get('MAIL_USE_TLS', True)
+        
+        with smtplib.SMTP(server, port, timeout=10) as smtp:
+            if use_tls:
+                smtp.starttls()
+            if username and password:
+                smtp.login(username, password)
+            smtp.send_message(msg)
     except Exception:
         current_app.logger.exception('SMTP send failed for subject %r', subject)
         return FAILED
@@ -132,34 +175,54 @@ def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None):
 
 
 def send_email(subject, text_body, html_body, recipients, reply_to=None,
-               dev_fallback_url=None):
+               dev_fallback_url=None, sender=None):
     """Send a transactional email. Returns SENT / FALLBACK_QUEUED / FAILED.
 
     When no transport is configured at all (typical local dev), the action URL
     is flashed so the flow can still be completed, and SENT is returned.
+
+    The `sender` parameter overrides MAIL_DEFAULT_SENDER for this message only.
     """
     recipients = [address for address in recipients if _is_valid_email(address)]
     if not recipients:
         current_app.logger.error('No valid recipients for email %r', subject)
         return FAILED
 
-    brevo_result = _send_via_brevo(subject, text_body, html_body, recipients, reply_to)
+    current_app.logger.info(
+        'Attempting to send email %r to %s from %s',
+        subject, recipients, sender or current_app.config.get('MAIL_DEFAULT_SENDER'),
+    )
+
+    brevo_result = _send_via_brevo(subject, text_body, html_body, recipients, reply_to, sender=sender)
     if brevo_result == SENT:
+        current_app.logger.info('Email %r sent via Brevo', subject)
         return SENT
 
-    smtp_result = _send_via_smtp(subject, text_body, html_body, recipients, reply_to)
-    if smtp_result is not None:
+    smtp_result = _send_via_smtp(subject, text_body, html_body, recipients, reply_to, sender=sender)
+    if smtp_result == SENT:
+        current_app.logger.info('Email %r sent via SMTP', subject)
+        return smtp_result
+    if smtp_result == FALLBACK_QUEUED:
+        current_app.logger.warning('Email %r queued via SMTP (unverified sender)', subject)
         return smtp_result
 
     if brevo_result == FAILED:
+        current_app.logger.error('Brevo send failed for %r', subject)
+    if smtp_result == FAILED:
+        current_app.logger.error('SMTP send failed for %r', subject)
+
+    if brevo_result == FAILED or smtp_result == FAILED:
         return FAILED
 
     if os.getenv('APP_ENV', '').strip().lower() == 'production':
         # Fail closed: a production deploy without a mail transport must never
         # leak action URLs (verification links) into the browser.
         current_app.logger.error(
-            'No email transport configured in production; dropping email %r to %s.',
+            'No email transport configured in production; dropping email %r to %s. '
+            'MAIL_SERVER=%s BREVO_API_KEY=%s',
             subject, recipients,
+            bool(current_app.config.get('MAIL_SERVER')),
+            bool(current_app.config.get('BREVO_API_KEY')),
         )
         return FAILED
 
