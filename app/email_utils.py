@@ -14,6 +14,7 @@ signal, and text-only email with raw URLs also scores poorly.
 import html
 import os
 import re
+import socket
 
 import requests
 from flask import current_app, flash
@@ -164,8 +165,20 @@ def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None, sen
             if username and password:
                 smtp.login(username, password)
             smtp.send_message(msg)
-    except Exception:
-        current_app.logger.exception('SMTP send failed for subject %r', subject)
+    except smtplib.SMTPAuthenticationError as e:
+        current_app.logger.error(
+            'SMTP authentication failed for %r: %s. Username=%s Server=%s:%s',
+            subject, e, username, server, port,
+        )
+        return FAILED
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, socket.timeout) as e:
+        current_app.logger.error(
+            'SMTP connection failed for %r: %s. Server=%s:%s',
+            subject, e, server, port,
+        )
+        return FAILED
+    except Exception as e:
+        current_app.logger.exception('SMTP send failed for subject %r: %s', subject, e)
         return FAILED
 
     # The old Gmail setup accepts mail but downstream providers may drop it.
