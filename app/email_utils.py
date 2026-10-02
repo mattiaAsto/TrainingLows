@@ -159,27 +159,40 @@ def _send_via_smtp(subject, text_body, html_body, recipients, reply_to=None, sen
         port = current_app.config.get('MAIL_PORT', 587)
         use_tls = current_app.config.get('MAIL_USE_TLS', True)
         
-        with smtplib.SMTP(server, port, timeout=10) as smtp:
-            if use_tls:
-                smtp.starttls()
-            if username and password:
-                smtp.login(username, password)
-            smtp.send_message(msg)
-    except smtplib.SMTPAuthenticationError as e:
-        current_app.logger.error(
-            'SMTP authentication failed for %r: %s. Username=%s Server=%s:%s',
-            subject, e, username, server, port,
-        )
-        return FAILED
-    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, socket.timeout) as e:
-        current_app.logger.error(
-            'SMTP connection failed for %r: %s. Server=%s:%s',
-            subject, e, server, port,
-        )
-        return FAILED
-    except Exception as e:
-        current_app.logger.exception('SMTP send failed for subject %r: %s', subject, e)
-        return FAILED
+        # Try up to 2 times (some SMTP servers close idle connections)
+        last_error = None
+        for attempt in range(2):
+            try:
+                with smtplib.SMTP(server, port, timeout=15) as smtp:
+                    if use_tls:
+                        smtp.starttls()
+                    if username and password:
+                        smtp.login(username, password)
+                    smtp.send_message(msg)
+                    break  # Success
+            except smtplib.SMTPAuthenticationError as e:
+                current_app.logger.error(
+                    'SMTP authentication failed for %r: %s. Username=%s Server=%s:%s',
+                    subject, e, username, server, port,
+                )
+                return FAILED
+            except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, socket.timeout, ConnectionError) as e:
+                last_error = e
+                if attempt == 0:
+                    current_app.logger.warning(
+                        'SMTP connection failed for %r (attempt 1/2): %s. Retrying...',
+                        subject, e,
+                    )
+                    continue
+                else:
+                    current_app.logger.error(
+                        'SMTP connection failed for %r (attempt 2/2): %s. Server=%s:%s',
+                        subject, e, server, port,
+                    )
+                    return FAILED
+            except Exception as e:
+                current_app.logger.exception('SMTP send failed for subject %r: %s', subject, e)
+                return FAILED
 
     # The old Gmail setup accepts mail but downstream providers may drop it.
     if sender.lower() in STALE_GMAIL_SENDERS:
