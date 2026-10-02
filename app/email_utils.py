@@ -199,6 +199,8 @@ def send_email(subject, text_body, html_body, recipients, reply_to=None,
     if brevo_result == SENT:
         current_app.logger.info('Email %r sent via Brevo', subject)
         return SENT
+    if brevo_result == FAILED:
+        current_app.logger.warning('Brevo send failed for %r, trying SMTP fallback', subject)
 
     smtp_result = _send_via_smtp(subject, text_body, html_body, recipients, reply_to, sender=sender)
     if smtp_result == SENT:
@@ -207,9 +209,6 @@ def send_email(subject, text_body, html_body, recipients, reply_to=None,
     if smtp_result == FALLBACK_QUEUED:
         current_app.logger.warning('Email %r queued via SMTP (unverified sender)', subject)
         return smtp_result
-
-    if brevo_result == FAILED:
-        current_app.logger.error('Brevo send failed for %r', subject)
     if smtp_result == FAILED:
         current_app.logger.error('SMTP send failed for %r', subject)
 
