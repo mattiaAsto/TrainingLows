@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+import bcrypt
 from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
@@ -11,7 +12,14 @@ from app.email_utils import (
 from app.activity_catalog import ACTIVITY_COLORS
 from app.athlete_context import athlete_is_visible, managed_athletes as get_roster_for_current_user, selected_athlete as get_selected_athlete
 from app.models import Activity, Athlete, Coach, PendingInvite, PlannedActivity, StravaActivity, User
+from app.rate_limit import enforce_rate_limit
 from . import settings
+
+
+def _is_valid_password(pw):
+    # bcrypt only uses the first 72 bytes; longer inputs would be silently
+    # truncated, so reject them instead of pretending they are distinct.
+    return bool(pw) and len(pw) >= 8 and len(pw.encode('utf-8')) <= 72
 
 
 ATHLETE_STATES = {
@@ -259,6 +267,36 @@ def update_profile():
         )
     else:
         flash('Personal data updated.', 'success')
+    return redirect(url_for('settings.settings_home'))
+
+
+@settings.route('/password/update', methods=['POST'])
+def update_password():
+    enforce_rate_limit('password-change', 10, 60)
+
+    old_password = request.form.get('old_password', '')
+    new_password = request.form.get('new_password', '')
+    confirm_new_password = request.form.get('confirm_new_password', '')
+
+    if not old_password or not new_password or not confirm_new_password:
+        flash('Please fill in all password fields.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
+    if not bcrypt.checkpw(old_password.encode('utf-8'), current_user.password):
+        flash('Your current password is incorrect. Your password was not changed.', 'danger')
+        return redirect(url_for('settings.settings_home'))
+
+    if not _is_valid_password(new_password):
+        flash('New password must be between 8 and 72 characters long.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
+    if new_password != confirm_new_password:
+        flash('New passwords do not match. Your password was not changed.', 'warning')
+        return redirect(url_for('settings.settings_home'))
+
+    current_user.password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+    db.session.commit()
+    flash('Your password has been updated.', 'success')
     return redirect(url_for('settings.settings_home'))
 
 

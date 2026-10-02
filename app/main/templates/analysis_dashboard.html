@@ -30,11 +30,11 @@
 
     <div class="row g-3 mb-3">
         <div class="col-12 col-xl-8"><div class="card shadow-sm h-100"><div class="card-body">
-            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Training load model</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="load-trend-chart" data-graph-title="Training load model" aria-label="Expand Training load model" title="Expand graph"><i class="fas fa-expand"></i></button></div><div class="text-muted small mb-2">TSS, chronic load, acute load, and form</div>
+            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Training load model</h5><div class="d-flex align-items-center gap-2"><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="load-trend-chart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="load-trend-chart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="load-trend-chart" data-graph-title="Training load model" aria-label="Expand Training load model" title="Expand graph"><i class="fas fa-expand"></i></button></div></div><div class="text-muted small mb-2">TSS, chronic load, acute load, and form</div>
             <div class="analysis-chart"><canvas id="load-trend-chart"></canvas></div>
         </div></div></div>
         <div class="col-12 col-xl-4"><div class="card shadow-sm h-100"><div class="card-body">
-            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Intensity mix</h5><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensity-chart" data-graph-title="Intensity mix" aria-label="Expand Intensity mix" title="Expand graph"><i class="fas fa-expand"></i></button></div><div class="text-muted small mb-2">Time spent at each effort level</div>
+            <div class="analysis-chart-heading"><h5 class="card-title mb-1">Intensity mix</h5><div class="d-flex align-items-center gap-2"><span class="chart-legend-wrap"><button class="btn btn-sm btn-outline-secondary chart-legend-toggle" type="button" data-legend-toggle="intensity-chart" aria-label="Show legend" title="Show legend"><i class="fas fa-palette"></i></button><div class="chart-legend-popover" data-legend-for="intensity-chart"></div></span><button class="btn btn-sm btn-outline-secondary graph-expand-btn" type="button" data-graph-target="intensity-chart" data-graph-title="Intensity mix" aria-label="Expand Intensity mix" title="Expand graph"><i class="fas fa-expand"></i></button></div></div><div class="text-muted small mb-2">Time spent at each effort level</div>
             <div class="analysis-chart analysis-chart-short"><canvas id="intensity-chart"></canvas></div>
         </div></div></div>
     </div>
@@ -86,6 +86,12 @@
     .type-dot { display: inline-block; width: 9px; height: 9px; margin-right: .45rem; border-radius: 50%; }
     .type-running { background: #dc3545; } .type-cycling { background: #198754; }
     .type-swimming { background: #0d6efd; } .type-strength { background: #fd7e14; }
+    .chart-legend-wrap { position:relative; display:inline-flex; flex:0 0 auto; }
+    .chart-legend-toggle { display:none; width:30px; height:30px; padding:0; place-items:center; flex:0 0 auto; }
+    .chart-legend-popover { display:none; position:absolute; top:calc(100% + .4rem); right:0; z-index:30; min-width:170px; max-width:min(260px, calc(100vw - 2.5rem)); max-height:220px; overflow-y:auto; padding:.5rem .65rem; background:#fff; border:1px solid #dee2e6; border-radius:8px; box-shadow:0 10px 26px rgba(0,0,0,.14); }
+    .chart-legend-popover.is-open { display:block; }
+    .chart-legend-popover .legend-item { display:flex; align-items:center; gap:.5rem; padding:.2rem 0; font-size:.78rem; color:#333; white-space:nowrap; }
+    .chart-legend-popover .legend-swatch { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
 
     /* Small-device overrides: shorter charts, full-width range toggle, compact KPI text */
     @media (max-width: 575.98px) {
@@ -96,6 +102,7 @@
         .analysis-page .btn-group[aria-label="Analysis time range"] { display:flex; width:100%; }
         .analysis-page .btn-group[aria-label="Analysis time range"] .btn { flex:1 1 0; font-size:.78rem; padding:.3rem .25rem; }
         .analysis-chart-heading h5 { font-size: 1rem; }
+        .chart-legend-toggle { display:inline-grid; }
     }
 </style>
 {% endblock %}
@@ -112,9 +119,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let expandedCanvasNextSibling = null;
     function closeAnalysisGraph() {
         if (!expandedCanvas) return;
+        const chart = charts[expandedCanvas.id.replace('-chart', '')];
         if (expandedCanvasNextSibling) expandedCanvasParent.insertBefore(expandedCanvas, expandedCanvasNextSibling); else expandedCanvasParent.appendChild(expandedCanvas);
         expandedCanvas = null; expandedCanvasParent = null; expandedCanvasNextSibling = null;
         graphOverlay.classList.remove('is-open'); graphOverlay.setAttribute('aria-hidden', 'true'); document.body.classList.remove('graph-overlay-open');
+        if (chart && chart.options.plugins && chart.options.plugins.legend) {
+            chart.options.plugins.legend.display = !isSmallScreen();
+            chart.resize();
+            chart.update('none');
+        }
     }
     document.querySelectorAll('#analysisGraphOverlay ~ .graph-expand-btn, .analysis-page .graph-expand-btn').forEach(function (button) {
         button.addEventListener('click', function () {
@@ -122,11 +135,55 @@ document.addEventListener('DOMContentLoaded', function () {
             expandedCanvas = canvas; expandedCanvasParent = canvas.parentElement; expandedCanvasNextSibling = canvas.nextSibling;
             graphOverlayTitle.textContent = button.dataset.graphTitle; graphOverlayStage.appendChild(canvas);
             graphOverlay.classList.add('is-open'); graphOverlay.setAttribute('aria-hidden', 'false'); document.body.classList.add('graph-overlay-open');
-            window.setTimeout(function () { if (charts[button.dataset.graphTarget.replace('-chart', '')]) charts[button.dataset.graphTarget.replace('-chart', '')].resize(); }, 50);
+            window.setTimeout(function () {
+                const chart = charts[button.dataset.graphTarget.replace('-chart', '')];
+                if (!chart) return;
+                // Expanded view has room, so always show the real Chart.js legend
+                if (chart.options.plugins && chart.options.plugins.legend) chart.options.plugins.legend.display = true;
+                chart.resize();
+                chart.update('none');
+            }, 50);
         });
     });
     document.querySelectorAll('[data-analysis-graph-close]').forEach(function (element) { element.addEventListener('click', closeAnalysisGraph); });
     document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeAnalysisGraph(); });
+    function isSmallScreen() { return window.matchMedia('(max-width: 575.98px)').matches; }
+    function setChartLegend(canvasId, items) {
+        const popover = document.querySelector('.chart-legend-popover[data-legend-for="' + canvasId + '"]');
+        if (!popover) return;
+        popover.innerHTML = items.length ? items.map(function (item) {
+            return '<div class="legend-item"><span class="legend-swatch" style="background:' + item.color + '"></span>' + escapeHtml(item.label) + '</div>';
+        }).join('') : '<div class="legend-item text-muted">No data</div>';
+    }
+    function closeLegendPopovers() {
+        document.querySelectorAll('.chart-legend-popover.is-open').forEach(function (p) { p.classList.remove('is-open'); });
+    }
+    document.querySelectorAll('.chart-legend-toggle').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const popover = document.querySelector('.chart-legend-popover[data-legend-for="' + button.dataset.legendToggle + '"]');
+            if (!popover) return;
+            const wasOpen = popover.classList.contains('is-open');
+            closeLegendPopovers();
+            if (!wasOpen) popover.classList.add('is-open');
+        });
+    });
+    document.addEventListener('click', closeLegendPopovers);
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeLegendPopovers(); });
+    let legendResizeTimer = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(legendResizeTimer);
+        legendResizeTimer = setTimeout(function () {
+            if (graphOverlay.classList.contains('is-open')) return;
+            const small = isSmallScreen();
+            Object.keys(charts).forEach(function (name) {
+                const chart = charts[name];
+                if (!chart.options.plugins || !chart.options.plugins.legend) return;
+                chart.options.plugins.legend.display = !small;
+                chart.update('none');
+            });
+        }, 150);
+    });
     const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
     const activityColors = {{ activity_colors|tojson }};
 
@@ -144,6 +201,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function replaceChart(name, config) {
         if (charts[name]) charts[name].destroy();
+        // On phones the in-canvas legend eats the plot area; the palette popover replaces it
+        if (isSmallScreen() && config.options.plugins && config.options.plugins.legend) config.options.plugins.legend.display = false;
         charts[name] = new Chart(document.getElementById(name + '-chart'), config);
     }
 
@@ -188,9 +247,12 @@ document.addEventListener('DOMContentLoaded', function () {
             recovery: { position: 'left', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Sleep / readiness' } },
             vitals: { position: 'right', beginAtZero: false, grid: { drawOnChartArea: false }, title: { display: true, text: 'HR / HRV' } }
         }, plugins: { legend: { position: 'bottom' } } } });
+        setChartLegend('load-trend-chart', charts['load-trend'].data.datasets.map(function (d) { return { label: d.label, color: d.borderColor || d.backgroundColor }; }));
 
         const intensity = data.intensity || [];
-        replaceChart('intensity', { type: 'doughnut', data: { labels: intensity.map(i => i.label), datasets: [{ data: intensity.map(i => i.minutes), backgroundColor: ['#74c0fc', '#ffc107', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+        const intensityPalette = ['#74c0fc', '#ffc107', '#dc3545'];
+        replaceChart('intensity', { type: 'doughnut', data: { labels: intensity.map(i => i.label), datasets: [{ data: intensity.map(i => i.minutes), backgroundColor: intensityPalette }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+        setChartLegend('intensity-chart', intensity.map(function (item, idx) { return { label: item.label, color: intensityPalette[idx] }; }));
 
         const zones = data.zones || [];
         replaceChart('zones', { type: 'bar', data: { labels: zones.map(z => z.label), datasets: [{ label: 'Minutes', data: zones.map(z => z.minutes), backgroundColor: ['#74c0fc', '#51cf66', '#ffc107', '#fd7e14', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } } });
