@@ -1,6 +1,6 @@
 {% extends "main_base.html" %}
 
-{% block title %}Report a bug - TrainingLows{% endblock %}
+{% block title %}Report a bug - {{ app_name }}{% endblock %}
 
 {% block body %}
 <div class="support-page">
@@ -59,7 +59,7 @@
             </section>
             <section class="support-panel">
                 <span class="support-kicker">Not a bug?</span>
-                <p class="mb-0">For questions, ideas, or account help, head to <a href="{{ url_for('about.support') }}">Support TL</a>.</p>
+                <p class="mb-0">For questions, ideas, or account help, head to <a href="{{ url_for('about.support') }}">Support {{ short_app_name }}</a>.</p>
             </section>
         </aside>
     </div>

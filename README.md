@@ -29,6 +29,15 @@ APP_ENV=production python production_update.py --apply --yes
 Run this as a release step before starting or replacing Gunicorn workers. The WSGI app does not create or alter tables at worker startup, avoiding concurrent schema changes across workers.
 The production updater provisions the admin account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` before Gunicorn starts. See [docs/ADMIN.md](docs/ADMIN.md) for Render setup and login instructions.
 
+## Application branding
+
+Set `APP_NAME` and `SHORT_APP_NAME` in your local `.env` file or in Render's service environment variables to change the displayed app name and its short label. The defaults are `TrainingLows` and `TL`.
+
+```text
+APP_NAME=TrainingLows
+SHORT_APP_NAME=TL
+```
+
 For Render/Gunicorn, use the import-safe WSGI entrypoint as the start command:
 
 ```text

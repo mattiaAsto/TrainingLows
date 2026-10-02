@@ -12,7 +12,7 @@
     <script src="{{url_for('main.static', filename='script.js')}}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <title>{% block title %}TrainingLows{% endblock %}</title>
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
     
     <style>
         * {
@@ -243,8 +243,8 @@
             <div class="container-fluid">
                 <a class="navbar-brand" href="{{url_for('main.home')}}">
                     <i class="fas fa-person-running" style="font-size: 24px;"></i>
-                    <span class="d-none d-md-inline" style="margin-left: 8px;">TrainingLows{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
-                    <span class="d-inline d-md-none tl-brand-mobile">TrainingLows{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
+                    <span class="d-none d-md-inline" style="margin-left: 8px;">{{ app_name }}{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
+                    <span class="d-inline d-md-none tl-brand-mobile">{{ app_name }}{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <i class="fa-solid fa-bars" id="navToggleIcon"></i>
@@ -295,7 +295,7 @@
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a></li>
                                 <li><a class="dropdown-item" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support {{ short_app_name }}{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a></li>
                                 {% if beta_feedbacks_enabled %}<li><a class="dropdown-item" href="{{ url_for('about.report_bug') }}"><i class="fas fa-bug"></i> Report a bug</a></li>{% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item" type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form></li>
@@ -338,7 +338,7 @@
                             <a class="nav-link" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a>
+                            <a class="nav-link" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support {{ short_app_name }}{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a>
                         </li>
                         {% if beta_feedbacks_enabled %}
                         <li class="nav-item">
@@ -387,7 +387,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-12 text-center">
-                        <p class="text-muted mb-0">&copy; 2026 TrainingLows. All rights reserved.</p>
+                        <p class="text-muted mb-0">&copy; 2026 {{ app_name }}. All rights reserved.</p>
                     </div>
                 </div>
             </div>

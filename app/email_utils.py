@@ -69,7 +69,7 @@ def _send_via_brevo(subject, text_body, html_body, recipients, reply_to=None):
         return None
 
     sender_address = _brevo_sender_address()
-    sender_name = (current_app.config.get('MAIL_SENDER_NAME') or 'TrainingLows').strip()
+    sender_name = (current_app.config.get('MAIL_SENDER_NAME') or _app_name()).strip()
     payload = {
         'sender': {'name': sender_name, 'email': sender_address},
         'to': [{'email': address} for address in recipients],
@@ -185,13 +185,21 @@ def email_layout(title, content_html):
         f'<h1 style="margin:0 0 16px;font-size:20px;color:#111;">{title}</h1>'
         f'{content_html}'
         '<p style="margin:24px 0 0;font-size:12px;color:#888;">'
-        'TrainingLows &mdash; training load management'
+        f'{_esc(_app_name())} &mdash; training load management'
         '</p></div></div></body></html>'
     )
 
 
 def _esc(value):
     return html.escape(value or '')
+
+
+def _app_name():
+    return current_app.config.get('APP_NAME') or 'TrainingLows'
+
+
+def _short_app_name():
+    return current_app.config.get('SHORT_APP_NAME') or 'TL'
 
 
 def _button(url, label):
@@ -212,7 +220,8 @@ def _fallback_link(url):
 
 def build_verification_email(first_name, verification_url):
     """Returns (subject, text_body, html_body)."""
-    subject = 'Verify your TrainingLows email address'
+    app_name = _app_name()
+    subject = f'Verify your {app_name} email address'
     text_body = (
         f'Hi {first_name},\n\n'
         f'Please verify your email address by opening this link:\n{verification_url}\n\n'
@@ -223,7 +232,7 @@ def build_verification_email(first_name, verification_url):
         'Verify your email address',
         f'<p style="font-size:15px;color:#333;">Hi {_esc(first_name)},</p>'
         '<p style="font-size:15px;color:#333;">Please confirm that this email '
-        'address belongs to you to activate your TrainingLows account.</p>'
+        f'address belongs to you to activate your {_esc(app_name)} account.</p>'
         f'{_button(verification_url, "Verify email address")}'
         f'{_fallback_link(verification_url)}'
         '<p style="font-size:13px;color:#555;">The link is valid for 7 days. '
@@ -234,19 +243,20 @@ def build_verification_email(first_name, verification_url):
 
 def build_invitation_email(recipient_name, sender_name, invite_url, invitation_type):
     """Returns (subject, text_body, html_body)."""
-    subject = f'{sender_name} invited you to connect on TrainingLows'
+    app_name = _app_name()
+    subject = f'{sender_name} invited you to connect on {app_name}'
     text_body = (
         f'Hi {recipient_name},\n\n'
-        f'{sender_name} sent you a {invitation_type} invitation on TrainingLows.\n\n'
+        f'{sender_name} sent you a {invitation_type} invitation on {app_name}.\n\n'
         f'Open the invitation here:\n{invite_url}\n\n'
         'You will need to sign in to review and accept or decline it.\n\n'
         'If you were not expecting this invitation, you can ignore this email.'
     )
     html_body = email_layout(
-        'New invitation on TrainingLows',
+        f'New invitation on {_esc(app_name)}',
         f'<p style="font-size:15px;color:#333;">Hi {_esc(recipient_name)},</p>'
         f'<p style="font-size:15px;color:#333;">{_esc(sender_name)} sent you a '
-        f'{_esc(invitation_type)} invitation on TrainingLows.</p>'
+        f'{_esc(invitation_type)} invitation on {_esc(app_name)}.</p>'
         f'{_button(invite_url, "Review invitation")}'
         f'{_fallback_link(invite_url)}'
         '<p style="font-size:13px;color:#555;">You will need to sign in to '
@@ -258,7 +268,7 @@ def build_invitation_email(recipient_name, sender_name, invite_url, invitation_t
 
 def build_support_request_email(requester, subject_line, message_body):
     """Returns (subject, text_body, html_body)."""
-    subject = f'TrainingLows support: {subject_line}'
+    subject = f'{_app_name()} support: {subject_line}'
     text_body = f'From: {requester}\n\n{message_body}'
     html_body = email_layout(
         f'Support request: {_esc(subject_line)}',
@@ -270,17 +280,19 @@ def build_support_request_email(requester, subject_line, message_body):
 
 def build_support_reply_email(thread_subject, reply_body):
     """Returns (subject, text_body, html_body)."""
-    subject = f'Reply from TrainingLows support: {thread_subject}'
+    app_name = _app_name()
+    short_app_name = _short_app_name()
+    subject = f'Reply from {app_name} support: {thread_subject}'
     text_body = (
-        f'There is a new reply in your TrainingLows support discussion "{thread_subject}".'
-        f'\n\n{reply_body}\n\nOpen Support TL to continue the conversation.'
+        f'There is a new reply in your {app_name} support discussion "{thread_subject}".'
+        f'\n\n{reply_body}\n\nOpen Support {short_app_name} to continue the conversation.'
     )
     html_body = email_layout(
         f'New reply: {_esc(thread_subject)}',
         '<p style="font-size:15px;color:#333;">There is a new reply in your '
-        f'TrainingLows support discussion &quot;{_esc(thread_subject)}&quot;.</p>'
+        f'{_esc(app_name)} support discussion &quot;{_esc(thread_subject)}&quot;.</p>'
         f'<p style="font-size:15px;color:#333;white-space:pre-line;">{_esc(reply_body)}</p>'
-        '<p style="font-size:13px;color:#555;">Open Support TL to continue '
+        f'<p style="font-size:13px;color:#555;">Open Support {_esc(short_app_name)} to continue '
         'the conversation.</p>',
     )
     return subject, text_body, html_body
@@ -289,7 +301,7 @@ def build_support_reply_email(thread_subject, reply_body):
 def build_bug_report_email(reporter, title, page_area, severity, steps, expected, actual):
     """Returns (subject, text_body, html_body)."""
     safe_title = ' '.join(title.split())
-    subject = f'TrainingLows bug report [{severity}]: {safe_title}'
+    subject = f'{_app_name()} bug report [{severity}]: {safe_title}'
     text_body = (
         f'From: {reporter}\n'
         f'Severity: {severity}\n'

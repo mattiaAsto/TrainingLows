@@ -1,20 +1,20 @@
 {% extends "main_base.html" %}
 
-{% block title %}Support TrainingLows{% endblock %}
+{% block title %}Support {{ app_name }}{% endblock %}
 
 {% block body %}
 <div class="coffee-page">
     <header class="coffee-hero">
-        <a class="coffee-back" href="{{ url_for('about.support') }}"><i class="fas fa-arrow-left me-2"></i>Back to Support TL</a>
-        <div class="coffee-hero-content"><div><span class="coffee-eyebrow">Keep the project alive</span><h1>Buy TrainingLows a coffee.</h1><p>TrainingLows is built as an independent project for athletes and coaches. A small contribution helps cover Render hosting, email delivery, database services, and the quiet hours spent improving the app.</p></div><div class="coffee-icon"><i class="fas fa-mug-hot"></i></div></div>
+        <a class="coffee-back" href="{{ url_for('about.support') }}"><i class="fas fa-arrow-left me-2"></i>Back to Support {{ short_app_name }}</a>
+        <div class="coffee-hero-content"><div><span class="coffee-eyebrow">Keep the project alive</span><h1>Buy {{ app_name }} a coffee.</h1><p>{{ app_name }} is built as an independent project for athletes and coaches. A small contribution helps cover Render hosting, email delivery, database services, and the quiet hours spent improving the app.</p></div><div class="coffee-icon"><i class="fas fa-mug-hot"></i></div></div>
     </header>
 
     <div class="coffee-grid">
         <main>
             <section class="coffee-panel coffee-why"><span class="coffee-kicker">Where it goes</span><h2>Your support keeps the lights on.</h2><div class="coffee-costs"><div><i class="fas fa-cloud"></i><strong>Hosting</strong><span>Keeping the app available on Render.</span></div><div><i class="fas fa-envelope"></i><strong>Reliable email</strong><span>Verification and trainer invitations.</span></div><div><i class="fas fa-database"></i><strong>Data services</strong><span>Storage for training history and recovery.</span></div><div><i class="fas fa-code"></i><strong>Development</strong><span>Time for fixes, ideas, and better workflows.</span></div></div></section>
-            <section class="coffee-panel coffee-note"><i class="fas fa-heart"></i><div><h2>Thank you for making this possible.</h2><p>There is no subscription pressure and no expectation. If TrainingLows is useful to you, a coffee is a simple way to help fund its next stretch of work.</p></div></section>
+            <section class="coffee-panel coffee-note"><i class="fas fa-heart"></i><div><h2>Thank you for making this possible.</h2><p>There is no subscription pressure and no expectation. If {{ app_name }} is useful to you, a coffee is a simple way to help fund its next stretch of work.</p></div></section>
         </main>
-        <aside class="coffee-action-panel"><div class="coffee-action-icon"><i class="fas fa-mug-hot"></i></div><span class="coffee-kicker">A small gesture</span><h2>Buy me a coffee</h2><p>Choose any amount through the secure payment page. You will leave TrainingLows to complete the contribution.</p>{% if coffee_url %}<a class="btn btn-danger btn-lg w-100" href="{{ coffee_url }}" target="_blank" rel="noopener noreferrer">Open contribution page <i class="fas fa-arrow-up-right-from-square ms-2"></i></a>{% else %}<div class="coffee-unconfigured"><i class="fas fa-link-slash me-2"></i>Payment link coming soon.</div><small class="text-muted">The administrator can configure `BUY_ME_A_COFFEE_URL` in the environment.</small>{% endif %}<a class="coffee-help-link" href="{{ url_for('about.support') }}">Need help instead? Visit Support TL.</a></aside>
+        <aside class="coffee-action-panel"><div class="coffee-action-icon"><i class="fas fa-mug-hot"></i></div><span class="coffee-kicker">A small gesture</span><h2>Buy me a coffee</h2><p>Choose any amount through the secure payment page. You will leave {{ app_name }} to complete the contribution.</p>{% if coffee_url %}<a class="btn btn-danger btn-lg w-100" href="{{ coffee_url }}" target="_blank" rel="noopener noreferrer">Open contribution page <i class="fas fa-arrow-up-right-from-square ms-2"></i></a>{% else %}<div class="coffee-unconfigured"><i class="fas fa-link-slash me-2"></i>Payment link coming soon.</div><small class="text-muted">The administrator can configure `BUY_ME_A_COFFEE_URL` in the environment.</small>{% endif %}<a class="coffee-help-link" href="{{ url_for('about.support') }}">Need help instead? Visit Support {{ short_app_name }}.</a></aside>
     </div>
 </div>
 {% endblock %}

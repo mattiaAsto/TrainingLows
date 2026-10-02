@@ -75,6 +75,11 @@ def create_app():
     # Recovering variables from .env file
     load_dotenv()
 
+    app_name = (os.getenv('APP_NAME') or 'TrainingLows').strip() or 'TrainingLows'
+    short_app_name = (os.getenv('SHORT_APP_NAME') or 'TL').strip() or 'TL'
+    app.config['APP_NAME'] = app_name
+    app.config['SHORT_APP_NAME'] = short_app_name
+
     db_user = os.getenv("DB_USER")
     db_password = os.getenv("DB_PASSWORD")
     db_hostname = os.getenv("DB_HOSTNAME")
@@ -154,7 +159,7 @@ def create_app():
     app.config['MAIL_USERNAME'] = mail_username  # Email per l'autenticazione
     app.config['MAIL_PASSWORD'] = mail_password         # Password per l'autenticazione
     app.config['MAIL_DEFAULT_SENDER'] = mail_default_sender  # Mittente predefinito (opzionale)
-    app.config['MAIL_SENDER_NAME'] = os.getenv('MAIL_SENDER_NAME', 'TrainingLows')
+    app.config['MAIL_SENDER_NAME'] = os.getenv('MAIL_SENDER_NAME', app_name)
     # Brevo HTTP API key; when set it takes priority over SMTP for transactional email.
     app.config['BREVO_API_KEY'] = os.getenv('BREVO_API_KEY', '').strip()
     # Inbox that receives support request notifications; defaults to the sender address.
@@ -239,6 +244,8 @@ def create_app():
         return {
             'support_unread_count': unread_count,
             'is_admin_user': is_admin_user,
+            'app_name': app.config['APP_NAME'],
+            'short_app_name': app.config['SHORT_APP_NAME'],
             'testing_version': app.config.get('TESTING_VERSION', ''),
             'beta_feedbacks_enabled': bool(app.config.get('TESTING_VERSION', '')),
         }

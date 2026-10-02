@@ -218,7 +218,7 @@ def init_admin(app):
 
     admin = Admin(
         app,
-        name='TrainingLows Admin',
+        name=f"{app.config.get('APP_NAME', 'TrainingLows')} Admin",
         index_view=AdminHomeView(name='Overview', url='/admin'),
         template_mode='bootstrap4',
     )

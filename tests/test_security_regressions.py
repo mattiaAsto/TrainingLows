@@ -34,6 +34,40 @@ class SecurityRegressionTests(unittest.TestCase):
         with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
             app = create_app()
         self.assertEqual(app.config['ADMIN_EMAIL'], '1@admin.com')
+        self.assertEqual(app.config['APP_NAME'], 'TrainingLows')
+        self.assertEqual(app.config['SHORT_APP_NAME'], 'TL')
+
+    def test_branding_environment_variables_update_template_context(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+            'APP_NAME': 'Paceforge',
+            'SHORT_APP_NAME': 'PF',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+
+        with app.test_request_context('/auth/login'):
+            template_context = {}
+            app.update_template_context(template_context)
+
+        self.assertEqual(template_context['app_name'], 'Paceforge')
+        self.assertEqual(template_context['short_app_name'], 'PF')
+        response = app.test_client().get('/auth/login')
+        self.assertIn(b'<title>Login - Paceforge</title>', response.data)
+        from app.email_utils import build_support_reply_email, build_verification_email
+        with app.app_context():
+            verification_subject, _, verification_html = build_verification_email(
+                'Athlete',
+                'https://example.test/verify',
+            )
+            reply_subject, reply_text, _ = build_support_reply_email('Question', 'Thanks')
+
+        self.assertIn('Paceforge', verification_subject)
+        self.assertIn('Paceforge', verification_html)
+        self.assertIn('Paceforge', reply_subject)
+        self.assertIn('Support PF', reply_text)
 
     def test_production_update_requires_strong_admin_password_before_backup(self):
         settings = {'APP_ENV': 'production', 'ADMIN_PASSWORD': ''}
