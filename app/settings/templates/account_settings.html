@@ -33,10 +33,94 @@
             <section class="settings-panel settings-panel--accent"><div class="panel-heading"><div><span class="panel-kicker">Connections</span><h2>Roster & links</h2></div><i class="fas fa-people-group"></i></div><p>Manage athletes, trainers, invitations, and your coaching relationships in one place.</p><a class="btn btn-danger" href="{{ url_for('settings.roster') }}">Open roster <i class="fas fa-arrow-right ms-2"></i></a></section>
             <section class="settings-panel"><div class="panel-heading"><div><span class="panel-kicker">Activity data</span><h2>Strava</h2></div><i class="fab fa-strava"></i></div><p>Connect your account and review imported activities.</p><a class="btn btn-outline-secondary" href="{{ url_for('strava.settings') }}">Manage Strava</a>{% if pending_strava_activities %}<div class="mini-alert"><i class="fas fa-inbox"></i>{{ pending_strava_activities|length }} activities waiting for review</div>{% endif %}</section>
         </aside>
+
+        <section class="settings-panel settings-panel--security">
+            <div class="panel-heading"><div><span class="panel-kicker">Security</span><h2>Change password</h2></div><i class="fas fa-key"></i></div>
+            <form method="post" action="{{ url_for('settings.update_password') }}" id="passwordForm" class="row g-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="old_password" id="old_password_hidden">
+                <div class="col-md-6"><label class="form-label" for="new_password">New password</label><input id="new_password" type="password" name="new_password" class="form-control" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+                <div class="col-md-6"><label class="form-label" for="confirm_new_password">Confirm new password</label><input id="confirm_new_password" type="password" name="confirm_new_password" class="form-control" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+                <div class="col-12"><button class="btn btn-dark px-4" type="button" id="openPasswordConfirmBtn"><i class="fas fa-key me-2"></i>Update password</button></div>
+            </form>
+        </section>
     </div>
 
     {% if pending_invites %}<section class="settings-panel pending-panel"><div class="panel-heading"><div><span class="panel-kicker">Action required</span><h2>Pending invitations</h2></div><i class="fas fa-bell"></i></div><div class="invite-list">{% for invite in pending_invites %}<div class="invite-row"><div><strong>{{ invite.kind|replace('_', ' ')|title }}</strong><span>From {{ invite.from_user.first_name }} {{ invite.from_user.last_name }}</span></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('settings.confirm_' + ('trainer' if invite.kind == 'trainer_link' else 'athlete') + '_link', token=invite.token) }}">Review</a></div>{% endfor %}</div></section>{% endif %}
+
+    <div class="modal fade" id="currentPasswordModal" tabindex="-1" aria-labelledby="currentPasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="currentPasswordModalLabel">Confirm your current password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="current_password_input">Current password</label>
+                    <input type="password" class="form-control" id="current_password_input" autocomplete="current-password">
+                    <div class="form-text" id="currentPasswordError" hidden>Please enter your current password.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-dark" id="confirmCurrentPasswordBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var openBtn = document.getElementById('openPasswordConfirmBtn');
+    var passwordForm = document.getElementById('passwordForm');
+    var modalEl = document.getElementById('currentPasswordModal');
+    if (!openBtn || !passwordForm || !modalEl || !window.bootstrap) return;
+
+    var modal = new bootstrap.Modal(modalEl);
+    var currentPasswordInput = document.getElementById('current_password_input');
+    var currentPasswordError = document.getElementById('currentPasswordError');
+    var oldPasswordHidden = document.getElementById('old_password_hidden');
+    var confirmBtn = document.getElementById('confirmCurrentPasswordBtn');
+
+    function confirmAndSubmit() {
+        if (!currentPasswordInput.value) {
+            currentPasswordError.hidden = false;
+            currentPasswordInput.focus();
+            return;
+        }
+        oldPasswordHidden.value = currentPasswordInput.value;
+        modal.hide();
+        passwordForm.submit();
+    }
+
+    openBtn.addEventListener('click', function () {
+        if (!passwordForm.reportValidity()) return;
+        var newPassword = document.getElementById('new_password').value;
+        var confirmPassword = document.getElementById('confirm_new_password').value;
+        if (newPassword !== confirmPassword) {
+            alert('New passwords do not match.');
+            return;
+        }
+        currentPasswordInput.value = '';
+        currentPasswordError.hidden = true;
+        modal.show();
+    });
+
+    modalEl.addEventListener('shown.bs.modal', function () {
+        currentPasswordInput.focus();
+    });
+
+    confirmBtn.addEventListener('click', confirmAndSubmit);
+    currentPasswordInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmAndSubmit();
+        }
+    });
+});
+</script>
 {% endblock %}
 
 {% block styles %}<style>
@@ -50,6 +134,7 @@
 .settings-panel { padding:1.5rem; border:1px solid #e5ebe8; border-radius:14px; background:#fff; box-shadow:0 8px 24px rgba(36,49,58,.05); }
 .settings-panel--profile { min-height:100%; }
 .settings-panel--accent { background:#fff8f8; border-color:#f0dfe1; }
+#currentPasswordError { color:#b02a37; margin-top:.4rem; font-size:.78rem; }
 .panel-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1.25rem; }
 .panel-heading h2 { margin:0; font-size:1.3rem; letter-spacing:-.02em; }
 .panel-heading > i { color:#dc3545; font-size:1.25rem; }

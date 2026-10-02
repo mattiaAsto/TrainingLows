@@ -526,6 +526,33 @@ class SecurityRegressionTests(unittest.TestCase):
             self.assertNotIn('selected_athlete_id', sess)
             self.assertNotIn('strava_oauth_state', sess)
 
+    def test_expired_csrf_token_redirects_home_instead_of_400(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+        client = app.test_client()
+        # No csrf_token in the POST body simulates an expired/missing token.
+        response = client.post('/auth/login', data={'email': 'a@b.com', 'password': 'whatever'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, '/')
+
+    def test_expired_csrf_token_on_api_returns_json(self):
+        settings = {
+            'DB_COMPLETE_URL': 'sqlite://',
+            'DATABASE_URL': '',
+            'SECRET_KEY': 'test-key',
+        }
+        with patch.dict(os.environ, settings, clear=True), patch('app.load_dotenv'):
+            app = create_app()
+        app.add_url_rule('/api/test-csrf', view_func=lambda: 'ok', methods=['POST'], endpoint='api_test_csrf')
+        response = app.test_client().post('/api/test-csrf')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json(), {'error': 'session_expired'})
+
 
 if __name__ == '__main__':
     unittest.main()

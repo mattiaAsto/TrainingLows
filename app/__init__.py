@@ -1,11 +1,11 @@
-from flask import Flask, render_template
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
 from flask_login import UserMixin, LoginManager, login_user, current_user
 from flask_caching import Cache
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
 from datetime import datetime
@@ -357,6 +357,16 @@ def create_app():
             "image": "auth_error",
         }
         return render_template("error.html", error=error), 429
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        # An expired CSRF token means the form was never processed; send the
+        # user back home so the next page load issues a fresh token instead
+        # of showing the bare 400 "CSRF token has expired" page.
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'session_expired'}), 400
+        flash('Your session expired. Please try again.', 'warning')
+        return redirect(url_for('main.home'))
     
     
         
