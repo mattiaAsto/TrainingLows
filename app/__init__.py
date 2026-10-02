@@ -180,9 +180,12 @@ def create_app():
     app.config['STRAVA_WEBHOOK_VERIFY_TOKEN'] = os.getenv('STRAVA_WEBHOOK_VERIFY_TOKEN', '')
     # Feature flag: when not truthy, every Strava route returns 404 and all Strava UI is hidden.
     app.config['STRAVA_API_ACTIVE']    = os.getenv('STRAVA_API_ACTIVE', '').strip().lower() in {'1', 'true', 'yes', 'on'}
-    # Feature flag: the beta bug-report panel on the Support page is visible unless explicitly
-    # disabled; when off, the submission route returns 404 and the panel is hidden.
-    app.config['BETA_TESTING_FEEDBACKS'] = os.getenv('BETA_TESTING_FEEDBACKS', '').strip().lower() not in {'0', 'false', 'no', 'off'}
+    # Testing stage: 'alpha' or 'beta' enables the bug-report feature and shows a version badge
+    # next to the brand; anything else (or unset) hides both.
+    testing_version = os.getenv('TESTING_VERSION', '').strip().lower()
+    if testing_version not in {'alpha', 'beta'}:
+        testing_version = ''
+    app.config['TESTING_VERSION'] = testing_version
     app_env = os.getenv('APP_ENV', '').strip().lower()
     # Fail safer: production deploys default to https (secure cookies, https
     # OAuth redirect URIs); local development keeps the http default.
@@ -236,7 +239,8 @@ def create_app():
         return {
             'support_unread_count': unread_count,
             'is_admin_user': is_admin_user,
-            'beta_feedbacks_enabled': app.config.get('BETA_TESTING_FEEDBACKS', True),
+            'testing_version': app.config.get('TESTING_VERSION', ''),
+            'beta_feedbacks_enabled': bool(app.config.get('TESTING_VERSION', '')),
         }
 
     """ Adding the tables to the admin panel

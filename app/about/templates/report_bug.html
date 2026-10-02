@@ -1,0 +1,74 @@
+{% extends "main_base.html" %}
+
+{% block title %}Report a bug - TrainingLows{% endblock %}
+
+{% block body %}
+<div class="support-page">
+    <header class="support-hero">
+        <div><span class="support-eyebrow">Beta testing</span><h1>Help us squash bugs.</h1><p>Spotted something broken? Describe how it happened and where you found it — the more precise the steps, the faster we can fix it.</p></div>
+        <div class="support-mark"><i class="fas fa-bug"></i></div>
+    </header>
+
+    <div class="support-grid">
+        <main>
+            <section class="support-panel">
+                <div class="support-section-heading"><div><span class="support-kicker">Beta testing</span><h2>Report a bug</h2></div><i class="fas fa-bug support-panel-icon"></i></div>
+                <p>Found something broken? Tell us how it happened so we can fix it fast.</p>
+                <form method="post" action="{{ url_for('about.report_bug') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3"><label class="form-label" for="bug_email">Email</label><input id="bug_email" type="email" name="email" class="form-control" value="{{ user.email if user.is_authenticated else '' }}" {% if user.is_authenticated %}readonly{% endif %} required></div>
+                    <div class="mb-3"><label class="form-label" for="bug_title">Title</label><input id="bug_title" name="title" class="form-control" placeholder="Short summary of the bug" maxlength="160" required></div>
+                    <div class="mb-3"><label class="form-label" for="bug_page_area">Where did it happen?</label><input id="bug_page_area" name="page_area" class="form-control" placeholder="Page or feature, e.g. Calendar, Strava sync" maxlength="160" required></div>
+                    <div class="mb-3"><label class="form-label" for="bug_steps">Steps to reproduce</label><textarea id="bug_steps" name="steps_to_reproduce" class="form-control" rows="4" placeholder="1. Go to... 2. Click on... 3. ..." required></textarea></div>
+                    <div class="mb-3"><label class="form-label" for="bug_expected">What did you expect to happen?</label><textarea id="bug_expected" name="expected_result" class="form-control" rows="2" required></textarea></div>
+                    <div class="mb-3"><label class="form-label" for="bug_actual">What happened instead?</label><textarea id="bug_actual" name="actual_result" class="form-control" rows="2" required></textarea></div>
+                    <div class="mb-3"><label class="form-label" for="bug_severity">Severity</label><select id="bug_severity" name="severity" class="form-select"><option value="blocker">Blocker — I cannot continue</option><option value="major">Major — a feature does not work</option><option value="minor" selected>Minor — annoying but usable</option><option value="cosmetic">Cosmetic — visual glitch</option></select></div>
+                    <button class="btn btn-danger w-100" type="submit">Send bug report <i class="fas fa-bug ms-2"></i></button>
+                </form>
+            </section>
+        </main>
+
+        <aside class="support-sidebar">
+            {% if user.is_authenticated %}
+            <section class="support-panel bug-reports-panel">
+                <div class="support-section-heading"><div><span class="support-kicker">Your reports</span><h2>Bug reports</h2></div><span class="support-count">{{ bug_reports|length }} total</span></div>
+                {% if bug_reports %}
+                <div class="discussion-list">
+                    {% for report in bug_reports %}
+                    <div class="discussion-row">
+                        <div><strong>{{ report.title }}</strong><small>{{ report.page_area }} · Severity: {{ report.severity|title }} · Sent {{ report.created_at|date_eu(true) }}</small></div>
+                        <span class="discussion-status discussion-status--{{ report.status }}">{{ report.status.replace('_', ' ')|title }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No bug reports yet. Use the form if you spot something broken.</p>
+                {% endif %}
+            </section>
+            {% endif %}
+            <section class="support-panel status-panel">
+                <span class="support-kicker">Before you send</span>
+                <h2>Useful details</h2>
+                <ul>
+                    <li>Which page were you using?</li>
+                    <li>What did you expect to happen?</li>
+                    <li>What happened instead?</li>
+                    <li>Can you reproduce it?</li>
+                    <li>Which browser and device were you on?</li>
+                </ul>
+            </section>
+            <section class="support-panel">
+                <span class="support-kicker">Not a bug?</span>
+                <p class="mb-0">For questions, ideas, or account help, head to <a href="{{ url_for('about.support') }}">Support TL</a>.</p>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}<style>
+.support-page { max-width:1240px; margin:0 auto; padding:3rem 1.25rem 5rem; color:#27313d; }.support-hero { display:flex; justify-content:space-between; align-items:center; gap:2rem; margin-bottom:1.25rem; padding:2rem 2.25rem; border:1px solid #e9ecef; border-radius:16px; background:#f8f9fa; box-shadow:0 10px 24px rgba(36,49,58,.06); }.support-eyebrow,.support-kicker { display:block; margin-bottom:.35rem; color:#dc3545; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }.support-hero h1 { margin:0; font-size:2.35rem; letter-spacing:-.04em; }.support-hero p { max-width:680px; margin:.5rem 0 0; color:#6c757d; font-size:1rem; }.support-mark { display:grid; width:72px; height:72px; flex:0 0 auto; place-items:center; border:1px solid #f0dfe1; border-radius:50%; color:#dc3545; background:#fff5f5; font-size:1.7rem; }.support-grid { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(300px,.75fr); gap:1.25rem; align-items:start; }.support-panel { padding:1.4rem; border:1px solid #e9ecef; border-radius:12px; background:#fff; box-shadow:0 6px 18px rgba(36,49,58,.04); }.support-sidebar { display:grid; gap:1.25rem; }.support-section-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }.support-section-heading h2,.support-panel h2 { margin:0; font-size:1.25rem; letter-spacing:-.02em; }.support-count { color:#6c757d; font-size:.75rem; }
+.discussion-list { display:grid; gap:.6rem; }.discussion-row { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.8rem 1rem; border:1px solid #e9ecef; border-radius:8px; color:#27313d; text-decoration:none; }.discussion-row strong,.discussion-row small { display:block; }.discussion-row small { margin-top:.2rem; color:#6c757d; font-size:.75rem; }.discussion-status { padding:.25rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; white-space:nowrap; }.discussion-status--new { background:#fff0f1; color:#b02a37; }.discussion-status--in_progress { background:#fff8e1; color:#8a6d00; }.discussion-status--fixed { background:#e8f5e9; color:#1e7e34; }
+.status-panel ul { margin-bottom:0; padding-left:1.2rem; color:#53606c; }.status-panel h2 { margin-bottom:.5rem; }
+@media(max-width:850px){ .support-grid { grid-template-columns:1fr; }.support-sidebar { grid-row:1; } }@media(max-width:560px){ .support-page { padding-top:1.5rem; }.support-hero { align-items:flex-start; padding:1.5rem; }.support-hero h1 { font-size:2rem; }.support-mark { display:none; } }
+</style>{% endblock %}

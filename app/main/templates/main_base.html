@@ -66,10 +66,45 @@
         
         .navbar-brand {
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
         }
         .navbar-brand:hover{
             color: #dc3545;
             transition: color 0.3s ease;
+        }
+        .tl-version-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+        .tl-version-badge--alpha {
+            background: #dc3545;
+            color: #fff;
+        }
+        .tl-version-badge--beta {
+            background: #e7f1ff;
+            color: #0d6efd;
+            border: 1px solid #b6d4fe;
+        }
+        .tl-brand-mobile {
+            margin-left: 8px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #27313d;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tl-brand-mobile .tl-version-badge {
+            font-size: 0.55rem;
+            padding: 2px 6px;
         }
         
         .nav-link {
@@ -208,7 +243,8 @@
             <div class="container-fluid">
                 <a class="navbar-brand" href="{{url_for('main.home')}}">
                     <i class="fas fa-person-running" style="font-size: 24px;"></i>
-                    <span class="d-none d-md-inline" style="margin-left: 8px;">TrainingLows</span>
+                    <span class="d-none d-md-inline" style="margin-left: 8px;">TrainingLows{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
+                    <span class="d-inline d-md-none tl-brand-mobile">TrainingLows{% if testing_version %}<span class="tl-version-badge tl-version-badge--{{ testing_version }}">{{ testing_version }}</span>{% endif %}</span>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <i class="fa-solid fa-bars" id="navToggleIcon"></i>
@@ -260,6 +296,7 @@
                                 <li><a class="dropdown-item" href="{{url_for('strava.settings')}}"><i class="fas fa-person-hiking"></i> Strava</a></li>
                                 <li><a class="dropdown-item" href="{{url_for('about.about_home')}}"><i class="fas fa-circle-info"></i> About</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a></li>
+                                {% if beta_feedbacks_enabled %}<li><a class="dropdown-item" href="{{ url_for('about.report_bug') }}"><i class="fas fa-bug"></i> Report a bug</a></li>{% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item" type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form></li>
                             </ul>
@@ -303,6 +340,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('about.support') }}"><i class="fas fa-headset"></i> Support TL{% if support_unread_count %}<span class="badge text-bg-danger ms-2">{{ support_unread_count }}</span>{% endif %}</a>
                         </li>
+                        {% if beta_feedbacks_enabled %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('about.report_bug') }}"><i class="fas fa-bug"></i> Report a bug</a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="nav-link border-0 bg-transparent" type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button></form>
                         </li>
