@@ -197,11 +197,31 @@ class AdminHomeView(AdminAccessMixin, AdminIndexView):
                 current_app.logger.exception('Could not count rows for admin model %s', model.__name__)
                 counts.append({'label': model.__name__, 'count': '—', 'endpoint': None})
         counts.sort(key=lambda item: item['label'].lower())
+        latest_message_id = (
+            db.session.query(db.func.max(SupportMessage.id))
+            .filter(SupportMessage.thread_id == SupportThread.id)
+            .correlate(SupportThread)
+            .scalar_subquery()
+        )
+        open_threads = SupportThread.query.filter_by(status='open').order_by(SupportThread.updated_at.desc())
+        waiting_threads = (
+            SupportThread.query
+            .join(SupportMessage, SupportMessage.id == latest_message_id)
+            .filter(SupportThread.status == 'open', SupportMessage.is_admin.is_(False))
+            .order_by(SupportThread.updated_at.desc())
+        )
+        new_bug_reports = BugReport.query.filter_by(status='new').order_by(BugReport.created_at.desc())
         return self.render(
             'admin/index.html',
             counts=counts,
             activity_types=list(ACTIVITY_TYPES),
             admin_email=current_app.config.get('ADMIN_EMAIL') or 'Not configured',
+            open_support_count=open_threads.count(),
+            waiting_support_count=waiting_threads.count(),
+            new_bug_report_count=new_bug_reports.count(),
+            waiting_support_threads=waiting_threads.limit(5).all(),
+            open_support_threads=open_threads.limit(5).all(),
+            new_bug_reports=new_bug_reports.limit(5).all(),
         )
 
     def _endpoint_for(self, model):
