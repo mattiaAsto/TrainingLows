@@ -27,26 +27,34 @@ def update_schema(app):
     with app.app_context():
         try:
             db.create_all()
+            identifier_preparer = db.engine.dialect.identifier_preparer
             users_columns = {column['name'] for column in inspect(db.engine).get_columns('Users')}
             if 'strava_auto_update' not in users_columns:
-                db.session.execute(text("ALTER TABLE Users ADD COLUMN strava_auto_update BOOLEAN NOT NULL DEFAULT 0"))
+                users_table = identifier_preparer.quote('Users')
+                db.session.execute(text(f"ALTER TABLE {users_table} ADD COLUMN strava_auto_update BOOLEAN NOT NULL DEFAULT 0"))
             if 'activity_tint_enabled' not in users_columns:
-                db.session.execute(text("ALTER TABLE Users ADD COLUMN activity_tint_enabled BOOLEAN NOT NULL DEFAULT 1"))
+                users_table = identifier_preparer.quote('Users')
+                db.session.execute(text(f"ALTER TABLE {users_table} ADD COLUMN activity_tint_enabled BOOLEAN NOT NULL DEFAULT 1"))
             athletes_columns = {column['name'] for column in inspect(db.engine).get_columns('Athletes')}
             if 'self_reported_state' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_state VARCHAR(30) NOT NULL DEFAULT 'ready'"))
+                athletes_table = identifier_preparer.quote('Athletes')
+                db.session.execute(text(f"ALTER TABLE {athletes_table} ADD COLUMN self_reported_state VARCHAR(30) NOT NULL DEFAULT 'ready'"))
             if 'self_reported_note' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_note TEXT NULL"))
+                athletes_table = identifier_preparer.quote('Athletes')
+                db.session.execute(text(f"ALTER TABLE {athletes_table} ADD COLUMN self_reported_note TEXT NULL"))
             if 'self_reported_at' not in athletes_columns:
-                db.session.execute(text("ALTER TABLE Athletes ADD COLUMN self_reported_at DATETIME NULL"))
+                athletes_table = identifier_preparer.quote('Athletes')
+                db.session.execute(text(f"ALTER TABLE {athletes_table} ADD COLUMN self_reported_at DATETIME NULL"))
             planned_columns = {column['name'] for column in inspect(db.engine).get_columns('planned_activities')}
             if 'specific_data' not in planned_columns:
                 db.session.execute(text("ALTER TABLE planned_activities ADD COLUMN specific_data JSON NULL"))
             activity_columns = {column['name'] for column in inspect(db.engine).get_columns('Activities')}
             if 'specific_data' not in activity_columns:
-                db.session.execute(text("ALTER TABLE Activities ADD COLUMN specific_data JSON NULL"))
+                activities_table = identifier_preparer.quote('Activities')
+                db.session.execute(text(f"ALTER TABLE {activities_table} ADD COLUMN specific_data JSON NULL"))
             if 'average_heartrate' not in activity_columns:
-                db.session.execute(text("ALTER TABLE Activities ADD COLUMN average_heartrate FLOAT NULL"))
+                activities_table = identifier_preparer.quote('Activities')
+                db.session.execute(text(f"ALTER TABLE {activities_table} ADD COLUMN average_heartrate FLOAT NULL"))
             support_thread_columns = {column['name'] for column in inspect(db.engine).get_columns('support_threads')}
             if 'user_last_read_at' not in support_thread_columns:
                 db.session.execute(text("ALTER TABLE support_threads ADD COLUMN user_last_read_at DATETIME NULL"))
