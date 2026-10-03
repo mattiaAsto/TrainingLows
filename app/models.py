@@ -410,6 +410,7 @@ class Activity(db.Model):
     distance_km = db.Column(db.Float, nullable=True)          # Distance in kilometers
     calories_burned = db.Column(db.Integer, nullable=True)    # Calories burned
     elevation_gain_m = db.Column(db.Float, nullable=True)     # Elevation gain in meters
+    average_heartrate = db.Column(db.Float, nullable=True)
     intensity = db.Column(db.String(20), nullable=False)      # "low", "moderate", "high"
     timez1_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 1 (seconds)
     timez2_seconds = db.Column(db.Integer, nullable=True, default=0)  # Time in zone 2 (seconds)

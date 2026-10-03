@@ -108,8 +108,8 @@
                             <div class="col-md-6">
                                 <label class="form-label">Entry type</label>
                                 <select class="form-select" name="entry_type" required>
-                                    <option value="planned" {% if (entry_type|default('planned')) == 'planned' %}selected{% endif %}>Planned</option>
-                                    <option value="done" {% if (entry_type|default('planned')) == 'done' %}selected{% endif %}>Done</option>
+                                    <option value="planned" {% if form_values.get('entry_type', entry_type|default('planned')) == 'planned' %}selected{% endif %}>Planned</option>
+                                    <option value="done" {% if form_values.get('entry_type', entry_type|default('planned')) == 'done' %}selected{% endif %}>Done</option>
                                 </select>
                             </div>
 
@@ -117,58 +117,73 @@
                                 <label class="form-label">Activity type</label>
                                 <select class="form-select" name="activity_type" required>
                                     {% for activity_type, definition in activity_definitions.items() %}
-                                    <option value="{{ activity_type }}" {% if (entry.activity_type|default('running')) == activity_type %}selected{% endif %}>{{ definition.label }}</option>
+                                    <option value="{{ activity_type }}" {% if form_values.get('activity_type', entry.activity_type|default('running')) == activity_type %}selected{% endif %}>{{ definition.label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
 
                             <div class="col-md-8">
                                 <label class="form-label">Title</label>
-                                <input class="form-control" type="text" name="title" value="{{ entry.title if is_edit else '' }}" placeholder="Easy run, threshold ride...">
+                                <input class="form-control" type="text" name="title" value="{{ form_values.get('title', entry.title if is_edit else '') }}" placeholder="Easy run, threshold ride...">
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Intensity</label>
                                 <select class="form-select" name="intensity">
-                                    <option value="low" {% if (entry.intensity|default('moderate')) == 'low' %}selected{% endif %}>Low</option>
-                                    <option value="moderate" {% if (entry.intensity|default('moderate')) == 'moderate' %}selected{% endif %}>Moderate</option>
-                                    <option value="high" {% if (entry.intensity|default('moderate')) == 'high' %}selected{% endif %}>High</option>
+                                    <option value="low" {% if form_values.get('intensity', entry.intensity|default('moderate')) == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="moderate" {% if form_values.get('intensity', entry.intensity|default('moderate')) == 'moderate' %}selected{% endif %}>Moderate</option>
+                                    <option value="high" {% if form_values.get('intensity', entry.intensity|default('moderate')) == 'high' %}selected{% endif %}>High</option>
                                 </select>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Date</label>
-                                <input class="form-control" type="date" name="date" value="{{ (entry.planned_date|default(entry.date)|string)[:10] if is_edit else default_date }}" required>
+                                <input class="form-control" type="date" name="date" value="{{ form_values.get('date', (entry.planned_date|default(entry.date)|string)[:10] if is_edit else default_date) }}" required>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Time</label>
-                                <input class="form-control" type="time" name="time" value="08:00" required>
+                                <input class="form-control" type="time" name="time" value="{{ form_values.get('time', (entry.planned_date|default(entry.date)).strftime('%H:%M') if is_edit else '08:00') }}" required>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Duration (minutes)</label>
-                                <input class="form-control" type="number" name="duration_minutes" min="0" value="{{ ((entry.duration_seconds|default(0)) / 60)|int if is_edit else 60 }}" required>
+                                <input class="form-control" type="number" name="duration_minutes" min="0" step="0.01" value="{{ form_values.get('duration_minutes', ((entry.duration_seconds|default(0)) / 60)|round(2) if is_edit else 60) }}" required>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Distance (km)</label>
-                                <input class="form-control" type="number" step="0.1" min="0" name="distance_km" value="{{ entry.distance_km if is_edit and entry.distance_km is not none else 0 }}">
+                                <input class="form-control" type="number" step="0.1" min="0" name="distance_km" value="{{ form_values.get('distance_km', entry.distance_km if is_edit and entry.distance_km is not none else 0) }}">
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Calories</label>
-                                <input class="form-control" type="number" min="0" name="calories" value="0">
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Elevation (m)</label>
-                                <input class="form-control" type="number" min="0" name="elevation_gain_m" value="0">
+                            <div class="col-12 specific-data-section" id="completedDataSection" {% if entry_type != 'done' %}hidden{% endif %}>
+                                <div class="specific-data-heading"><div><span>Completed activity details</span><small>Optional training metrics and time spent in each heart-rate zone.</small></div></div>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="calories">Calories</label>
+                                        <input class="form-control" type="number" min="0" step="1" id="calories" name="calories" value="{{ form_values.get('calories', entry.calories_burned if is_edit and entry_type == 'done' and entry.calories_burned is not none else '') }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="elevation_gain_m">Elevation gain (m)</label>
+                                        <input class="form-control" type="number" min="0" step="0.1" id="elevation_gain_m" name="elevation_gain_m" value="{{ form_values.get('elevation_gain_m', entry.elevation_gain_m if is_edit and entry_type == 'done' and entry.elevation_gain_m is not none else '') }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="average_heartrate">Average heart rate (bpm)</label>
+                                        <input class="form-control" type="number" min="0" step="1" id="average_heartrate" name="average_heartrate" value="{{ form_values.get('average_heartrate', entry.average_heartrate if is_edit and entry_type == 'done' and entry.average_heartrate is not none else '') }}">
+                                    </div>
+                                    {% for zone in range(1, 6) %}
+                                    {% set zone_field = 'timez' ~ zone ~ '_seconds' %}
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="{{ zone_field }}">Time in zone {{ zone }} (seconds)</label>
+                                        <input class="form-control" type="number" min="0" step="1" id="{{ zone_field }}" name="{{ zone_field }}" value="{{ form_values.get(zone_field, entry|attr(zone_field) if is_edit and entry_type == 'done' and entry|attr(zone_field) is not none else '') }}">
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </div>
 
                             <div class="col-12">
                                 <label class="form-label">Description</label>
-                                <textarea class="form-control" name="description" rows="3" placeholder="Extra notes, focus, or goals...">{{ entry.description if is_edit else '' }}</textarea>
+                                <textarea class="form-control" name="description" rows="3" placeholder="Extra notes, focus, or goals...">{{ form_values.get('description', entry.description if is_edit else '') }}</textarea>
                             </div>
 
                             <div class="col-12 specific-data-section" id="specificDataSection" hidden>
@@ -201,7 +216,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const activitySelect = document.querySelector('[name="activity_type"]');
     const fieldsContainer = document.getElementById('specificDataFields');
     const section = document.getElementById('specificDataSection');
-    const existing = {{ (entry.specific_data or {})|tojson if is_edit else '{}' }};
+    const existing = {{ specific_data_values|default({})|tojson }};
+    const submitted = {{ form_values|default({})|tojson }};
+    const entryTypeSelect = document.querySelector('[name="entry_type"]');
+    const completedDataSection = document.getElementById('completedDataSection');
 
     function renderSpecificFields() {
         const fields = (definitions[activitySelect.value] || {}).specific_data || {};
@@ -210,7 +228,8 @@ document.addEventListener('DOMContentLoaded', function () {
         section.hidden = names.length === 0;
         names.forEach(function (name) {
             const definition = fields[name];
-            const value = existing[name] == null ? '' : existing[name];
+            const submittedValue = submitted['specific_' + name];
+            const value = submittedValue !== undefined ? submittedValue : (existing[name] == null ? '' : existing[name]);
             const wrapper = document.createElement('div');
             wrapper.className = 'col-md-6';
             const label = document.createElement('label');
@@ -225,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 input = document.createElement('input'); input.className = 'form-control';
                 input.type = definition.datatype === 'integer' || definition.datatype === 'float' ? 'number' : definition.datatype === 'boolean' ? 'checkbox' : 'text';
                 if (input.type === 'number') { input.step = definition.datatype === 'float' ? '0.1' : '1'; if (definition.min != null) input.min = definition.min; if (definition.max != null) input.max = definition.max; }
-                if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = value;
+                if (input.type === 'checkbox') input.checked = submittedValue !== undefined ? submittedValue === 'on' : Boolean(value); else input.value = value;
                 if (definition.placeholder) input.placeholder = definition.placeholder;
             }
             input.name = 'specific_' + name; input.id = 'specific_' + name;
@@ -235,7 +254,12 @@ document.addEventListener('DOMContentLoaded', function () {
             fieldsContainer.appendChild(wrapper);
         });
     }
+    function toggleCompletedFields() {
+        completedDataSection.hidden = entryTypeSelect.value !== 'done';
+    }
     activitySelect.addEventListener('change', renderSpecificFields);
+    entryTypeSelect.addEventListener('change', toggleCompletedFields);
+    toggleCompletedFields();
     renderSpecificFields();
 });
 </script>

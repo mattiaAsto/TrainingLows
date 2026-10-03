@@ -30,7 +30,7 @@ REQUIRED_COLUMNS = {
     'Users': {'strava_auto_update', 'activity_tint_enabled'},
     'Athletes': {'self_reported_state', 'self_reported_note', 'self_reported_at'},
     'planned_activities': {'specific_data'},
-    'Activities': {'specific_data'},
+    'Activities': {'specific_data', 'average_heartrate'},
     'support_threads': {'user_last_read_at'},
 }
 
