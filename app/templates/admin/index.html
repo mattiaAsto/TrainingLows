@@ -13,6 +13,7 @@
         <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Invitations</span><strong>{{ counts|selectattr('label', 'equalto', 'PendingInvite')|map(attribute='count')|first }}</strong><small>connection records</small></div></div>
     </div>
 
+    <section class="admin-panel mb-4">
         <div class="panel-heading">
             <div><div class="admin-kicker">Needs attention</div><h2>Support inbox</h2></div>
             <a class="btn btn-sm btn-outline-danger" href="{{ url_for('support.index', status='open') }}">Open inbox</a>

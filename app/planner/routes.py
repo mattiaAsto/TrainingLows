@@ -147,6 +147,7 @@ def add_entry():
                     'calories_burned': parse_number(request.form, 'calories', 'Calories', integer=True, minimum=0),
                     'elevation_gain_m': parse_number(request.form, 'elevation_gain_m', 'Elevation', minimum=0),
                     'average_heartrate': parse_number(request.form, 'average_heartrate', 'Average heart rate', minimum=0),
+                    'max_heartrate': parse_number(request.form, 'max_heartrate', 'Max heart rate', minimum=0),
                 }
                 zone_times = {
                     f'timez{zone}_seconds': parse_number(
@@ -246,6 +247,7 @@ def edit_entry(entry_type, entry_id):
                     'calories_burned': parse_number(request.form, 'calories', 'Calories', integer=True, minimum=0),
                     'elevation_gain_m': parse_number(request.form, 'elevation_gain_m', 'Elevation', minimum=0),
                     'average_heartrate': parse_number(request.form, 'average_heartrate', 'Average heart rate', minimum=0),
+                    'max_heartrate': parse_number(request.form, 'max_heartrate', 'Max heart rate', minimum=0),
                     **{
                         f'timez{zone}_seconds': parse_number(
                             request.form, f'timez{zone}_seconds', f'Zone {zone} time',

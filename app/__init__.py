@@ -55,6 +55,9 @@ def update_schema(app):
             if 'average_heartrate' not in activity_columns:
                 activities_table = identifier_preparer.quote('Activities')
                 db.session.execute(text(f"ALTER TABLE {activities_table} ADD COLUMN average_heartrate FLOAT NULL"))
+            if 'max_heartrate' not in activity_columns:
+                activities_table = identifier_preparer.quote('Activities')
+                db.session.execute(text(f"ALTER TABLE {activities_table} ADD COLUMN max_heartrate FLOAT NULL"))
             support_thread_columns = {column['name'] for column in inspect(db.engine).get_columns('support_threads')}
             if 'user_last_read_at' not in support_thread_columns:
                 db.session.execute(text("ALTER TABLE support_threads ADD COLUMN user_last_read_at DATETIME NULL"))

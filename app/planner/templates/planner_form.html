@@ -171,6 +171,10 @@
                                         <label class="form-label" for="average_heartrate">Average heart rate (bpm)</label>
                                         <input class="form-control" type="number" min="0" step="1" id="average_heartrate" name="average_heartrate" value="{{ form_values.get('average_heartrate', entry.average_heartrate if is_edit and entry_type == 'done' and entry.average_heartrate is not none else '') }}">
                                     </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="max_heartrate">Max heart rate (bpm)</label>
+                                        <input class="form-control" type="number" min="0" step="1" id="max_heartrate" name="max_heartrate" value="{{ form_values.get('max_heartrate', entry.max_heartrate if is_edit and entry_type == 'done' and entry.max_heartrate is not none else '') }}">
+                                    </div>
                                     {% for zone in range(1, 6) %}
                                     {% set zone_field = 'timez' ~ zone ~ '_seconds' %}
                                     <div class="col-md-4">
