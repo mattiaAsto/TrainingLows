@@ -8,7 +8,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_wtf.csrf import CSRFError, CSRFProtect
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 #from app.admin.routes import AdminHomeView
 import os
 from sqlalchemy import inspect, text
@@ -242,6 +242,16 @@ def create_app():
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SECURE'] = preferred_url_scheme == 'https'
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    try:
+        remember_days = int(os.getenv('REMEMBER_ME', '7').strip() or 7)
+    except ValueError:
+        raise ValueError('REMEMBER_ME must be an integer number of days.')
+    if remember_days < 1:
+        raise ValueError('REMEMBER_ME must be at least 1 day.')
+    remember_duration = timedelta(days=remember_days)
+    app.config['REMEMBER_COOKIE_DURATION'] = remember_duration
+    app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
+    app.config['PERMANENT_SESSION_LIFETIME'] = remember_duration
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
     app.config['REMEMBER_COOKIE_SECURE'] = preferred_url_scheme == 'https'
     app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'

@@ -31,7 +31,8 @@ MAIL_SENDER_NAME = TrainingLows
 BREVO_API_KEY =
 
 SECRET_KEY =
-# Admin login email; it need not receive email. Defaults to 1@admin.com.
+# Days the login is kept when "Remember me" is checked (default 7)
+REMEMBER_ME = 7# Admin login email; it need not receive email. Defaults to 1@admin.com.
 ADMIN_EMAIL = 1@admin.com
 # Required for production_update.py --apply; use at least 16 characters.
 ADMIN_PASSWORD =

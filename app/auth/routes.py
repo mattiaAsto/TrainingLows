@@ -78,6 +78,7 @@ def login():
             # Drop any anonymous-session state (selected athlete, stale OAuth
             # state, ...) before establishing the authenticated session.
             session.clear()
+            session.permanent = bool(remember)
             login_user(user, remember=bool(remember))
             flash(f'Welcome back, {user.first_name}!', 'success')
             return redirect(url_for('main.home'))
